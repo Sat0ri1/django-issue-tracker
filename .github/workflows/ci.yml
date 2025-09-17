@@ -31,7 +31,7 @@ jobs:
       run: ruff check issues
 
     - name: Run Mypy (typy)
-      run: mypy issues
+      run: mypy issues --ignore-missing-imports # problem ze stubami w testach i brak w pip i uv
 
     - name: Run tests
       run: pytest
