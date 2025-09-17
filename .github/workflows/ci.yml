@@ -34,4 +34,4 @@ jobs:
       run: mypy issues --ignore-missing-imports # problem ze stubami w testach i brak w pip i uv
 
     - name: Run tests
-      run: pytest
+      run: .venv/bin/python -m pytest
