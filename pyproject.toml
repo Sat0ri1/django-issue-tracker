@@ -1,0 +1,14 @@
+[project]
+name = "django-issue-tracker"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "django>=5.2.6",
+    "mypy>=1.18.1",
+    "playwright>=1.55.0",
+    "pytest>=8.4.2",
+    "pytest-django>=4.11.1",
+    "ruff>=0.13.0",
+]
