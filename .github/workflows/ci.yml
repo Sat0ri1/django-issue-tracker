@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings
 
     steps:
     - name: Checkout repo
@@ -22,7 +24,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install uv
+        pip install uv ruff mypy  # jawnie instalujemy ruff i mypy
         uv sync
 
     - name: Run Ruff (lint)
