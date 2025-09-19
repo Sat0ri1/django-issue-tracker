@@ -1,0 +1,21 @@
+<div class="card" id="issue-{{ issue.pk }}">
+  <a href="{% url 'issue_detail' pk=issue.pk %}"><strong>{{ issue.title }}</strong></a>
+  <div>{{ issue.description|linebreaksbr }}</div>
+  <div>
+    <span class="badge {{ issue.status }}">{{ issue.get_status_display }}</span>
+    {% if issue.assignee %} - przypisany do {{ issue.assignee.username }}{% endif %}
+    {% if issue.author %} - autor: {{ issue.author.username }}{% endif %}
+  </div>
+  <!-- HTMX formularz zmiany statusu -->
+  <div>
+    <form hx-post="{% url 'change_status' pk=issue.pk %}" hx-swap="outerHTML" style="display:inline">
+      {% csrf_token %}
+      <select name="status">
+        {% for val, label in issue.STATUS_CHOICES %}
+          <option value="{{ val }}" {% if issue.status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Zmień</button>
+    </form>
+  </div>
+</div>

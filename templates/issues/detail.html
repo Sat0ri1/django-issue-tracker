@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ issue.title }}{% endblock %}
+{% block content %}
+
+<h1>{{ issue.title }}</h1>
+<p>{{ issue.description }}</p>
+<p>Status: {{ issue.get_status_display }}</p>
+<p>Autor: {{ issue.author.username if issue.author else "Anonim" }}</p>
+
+<h2>Komentarze</h2>
+<div id="comments-list">
+    {% for comment in issue.comments.all %}
+        {% include "issues/_comment_item.html" %}
+    {% empty %}
+        <p>Brak komentarzy</p>
+    {% endfor %}
+</div>
+
+{% if user.is_authenticated %}
+<h3>Dodaj komentarz</h3>
+<form hx-post="{% url 'add_comment' issue_pk=issue.pk %}" hx-target="#comments-list" hx-swap="beforeend">
+    {% csrf_token %}
+    {{ comment_form.as_p }}
+    <button type="submit">Dodaj komentarz</button>
+</form>
+{% else %}
+<p>Musisz być zalogowany, aby dodać komentarz.</p>
+{% endif %}
+
+{% endblock %}

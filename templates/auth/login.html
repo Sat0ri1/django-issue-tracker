@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Logowanie{% endblock %}
+
+{% block content %}
+<h1>Logowanie</h1>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+    <button type="submit">Zaloguj</button>
+</form>
+
+<p>Nie masz konta? <a href="{% url 'register' %}">Zarejestruj się</a></p>
+
+{% if form.errors %}
+    <ul style="color:red;">
+        {% for field in form %}
+            {% for error in field.errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        {% endfor %}
+        {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}
+{% endblock %}

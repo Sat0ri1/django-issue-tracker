@@ -1,0 +1,13 @@
+<div class="card" id="comment-{{ comment.pk }}">
+  <div>
+    <strong>
+      {% if comment.author %}
+        {{ comment.author.username }}
+      {% else %}
+        Anonim
+      {% endif %}
+    </strong> 
+    <small>{{ comment.created_at }}</small>
+  </div>
+  <div>{{ comment.text|linebreaksbr }}</div>
+</div>

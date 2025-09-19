@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Projekt: {{ project.name }}{% endblock %}
+{% block content %}
+<h1>{{ project.name }}</h1>
+<p>{{ project.description|linebreaksbr }}</p>
+
+<h2>Dodaj zgłoszenie</h2>
+<form hx-post="{% url 'create_issue' project.pk %}" hx-swap="afterbegin">
+  {% csrf_token %}
+  {{ issue_form.as_p }}
+  <button type="submit">Dodaj</button>
+</form>
+
+<h2>Zgłoszenia</h2>
+<div id="issues-list">
+  {% include "issues/_issue_list.html" %}
+</div>
+{% endblock %}

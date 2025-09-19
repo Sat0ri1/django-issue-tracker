@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Projekt: {{ project.name }}{% endblock %}
+{% block content %}
+
+<h1>{{ project.name }}</h1>
+<p>{{ project.description }}</p>
+
+<h2>Dodaj zgłoszenie</h2>
+{% if user.is_authenticated %}
+  <form hx-post="{% url 'create_issue' project_pk=project.pk %}" hx-target="#issues-list" hx-swap="beforeend">
+      {% csrf_token %}
+      {{ issue_form.as_p }}
+      <button type="submit">Dodaj</button>
+  </form>
+{% else %}
+  <p>Musisz być zalogowany, aby dodać zgłoszenie.</p>
+{% endif %}
+
+<h2>Zgłoszenia</h2>
+<div id="issues-list">
+    {% for issue in project.issues.all %}
+        {% include "issues/_issue_item.html" %}
+    {% empty %}
+        <p>Brak zgłoszeń</p>
+    {% endfor %}
+</div>
+
+{% endblock %}
