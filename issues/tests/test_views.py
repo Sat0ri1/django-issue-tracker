@@ -11,19 +11,6 @@ def test_project_list_view(client):
     assert b"P1" in r.content
 
 @pytest.mark.django_db
-def test_create_issue_htmx(client, django_user_model):
-    # tworzymy użytkownika i logujemy
-    user = django_user_model.objects.create_user(username="tester", password="pass123")
-    client.login(username="tester", password="pass123")
-    project = Project.objects.create(name="P")
-    data = {"title": "BugX", "description": "desc"}
-    url = reverse("create_issue", kwargs={"project_pk": project.pk})
-    r = client.post(url, data, HTTP_HX_REQUEST="true")
-    assert r.status_code == 200
-    assert "BugX" in r.content.decode()
-    assert project.issues.count() == 1
-
-@pytest.mark.django_db
 def test_create_issue_requires_login(client):
     project = Project.objects.create(name="P2")
     url = reverse("create_issue", kwargs={"project_pk": project.pk})
@@ -49,7 +36,7 @@ def test_change_status_requires_login(client):
 @pytest.mark.django_db
 def test_create_issue_logged_in(client):
     user = User.objects.create_user(username="tester", password="pass")
-    client.login(username="tester", password="pass")
+    client.login(username=user.username, password="pass")  # użycie user
     project = Project.objects.create(name="P5")
     url = reverse("create_issue", kwargs={"project_pk": project.pk})
     response = client.post(url, {"title": "BugY", "description": "desc"})
@@ -60,7 +47,7 @@ def test_create_issue_logged_in(client):
 @pytest.mark.django_db
 def test_add_comment_logged_in(client):
     user = User.objects.create_user(username="commenter", password="pass")
-    client.login(username="commenter", password="pass")
+    client.login(username=user.username, password="pass")  # użycie user
     project = Project.objects.create(name="P6")
     issue = Issue.objects.create(project=project, title="Bug", description="desc")
     url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
@@ -73,7 +60,7 @@ def test_add_comment_logged_in(client):
 @pytest.mark.django_db
 def test_change_status_logged_in(client):
     user = User.objects.create_user(username="tester2", password="pass")
-    client.login(username="tester2", password="pass")
+    client.login(username=user.username, password="pass")  # użycie user
     project = Project.objects.create(name="P7")
     issue = Issue.objects.create(project=project, title="Bug", description="desc")
     url = reverse("change_status", kwargs={"pk": issue.pk})

@@ -1,7 +1,7 @@
 import pytest
 from django.urls import reverse
 from django.contrib.auth.models import User
-from issues.models import Project, Issue, Comment
+from issues.models import Project, Issue
 
 @pytest.mark.django_db
 class TestHTMXViews:
