@@ -1,13 +1,15 @@
-<div class="card" id="comment-{{ comment.pk }}">
-  <div>
-    <strong>
-      {% if comment.author %}
-        {{ comment.author.username }}
-      {% else %}
-        Anonim
-      {% endif %}
-    </strong> 
-    <small>{{ comment.created_at }}</small>
-  </div>
-  <div>{{ comment.text|linebreaksbr }}</div>
+<div class="card p-3 bg-white shadow rounded mb-2" id="comment-{{ comment.pk }}">
+    <div class="flex justify-between items-center mb-1">
+        <strong class="text-gray-700">
+            {% if comment.author %}
+                {{ comment.author.username }}
+            {% else %}
+                Anonim
+            {% endif %}
+        </strong>
+        <small class="text-gray-400 text-sm">{{ comment.created_at|date:"Y-m-d H:i" }}</small>
+    </div>
+    <div class="text-gray-800">
+        {{ comment.text|linebreaksbr }}
+    </div>
 </div>

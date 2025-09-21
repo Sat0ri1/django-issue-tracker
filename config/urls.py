@@ -24,9 +24,17 @@ urlpatterns = [
     path("", include("issues.urls")),
 
     # logowanie, wylogowanie
-    path('login/', auth_views.LoginView.as_view(template_name='auth/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
-    
+    path(
+        "login/",
+        auth_views.LoginView.as_view(template_name="auth/login.html"),
+        name="login"
+    ),
+    path(
+        "logout/",
+        auth_views.LogoutView.as_view(next_page="project_list"),
+        name="logout"
+    ),
+
     # rejestracja
-    path('register/', issues_views.register, name='register'),
+    path("register/", issues_views.register, name="register"),
 ]

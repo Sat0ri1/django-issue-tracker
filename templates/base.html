@@ -2,36 +2,47 @@
 <html lang="pl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}Issue Tracker{% endblock %}</title>
 
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
   <!-- HTMX + Alpine -->
   <script src="https://unpkg.com/htmx.org@1.9.2"></script>
   <script src="https://unpkg.com/alpinejs@3.12.0/dist/cdn.min.js" defer></script>
-
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 20px; }
-    .card { border: 1px solid #ddd; padding: 12px; border-radius: 6px; margin-bottom: 8px; }
-    .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.9em; }
-    .badge.todo { background:#f0f0f0 }
-    .badge.in_progress { background:#ffe58a }
-    .badge.done { background:#b7eb8f }
-  </style>
 </head>
-<body>
-  <nav>
-    <a href="{% url 'project_list' %}">Projekty</a> |
-    <a href="/admin/">Admin</a> |
-    {% if user.is_authenticated %}
-        Witaj, {{ user.username }} |
-        <a href="{% url 'logout' %}">Wyloguj</a>
-    {% else %}
-        <a href="{% url 'login' %}">Zaloguj</a> |
-        <a href="{% url 'register' %}">Rejestracja</a>
-    {% endif %}
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+  <!-- Navbar -->
+  <nav class="bg-white shadow p-4 flex justify-between items-center">
+    <div class="flex space-x-4">
+      <a href="{% url 'project_list' %}" class="font-semibold text-lg text-gray-700 hover:text-blue-600">Projekty</a>
+      <a href="/admin/" class="text-gray-600 hover:text-blue-600">Admin</a>
+    </div>
+    <div class="flex items-center space-x-2">
+      {% if user.is_authenticated %}
+        <span class="text-gray-700">Welcome, {{ user.username }}</span>
+        <form action="{% url 'logout' %}" method="post">
+          {% csrf_token %}
+          <button type="submit" class="text-blue-600 hover:text-blue-800 underline">Log out</button>
+        </form>
+      {% else %}
+        <span class="text-gray-600">You must me logged in.</span>
+        <a href="{% url 'login' %}" class="text-blue-600 hover:text-blue-800 underline">Log in</a>
+        <span class="text-gray-500">/</span>
+        <a href="{% url 'register' %}" class="text-blue-600 hover:text-blue-800 underline">Register</a>
+      {% endif %}
+    </div>
   </nav>
 
-  <hr/>
-  {% block content %}{% endblock %}
+  <!-- Main content -->
+  <main class="flex-1 container mx-auto p-4">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="bg-white shadow p-4 text-center text-gray-500 text-sm">
+    &copy; {{ now.year }} Issue Tracker
+  </footer>
+
 </body>
 </html>

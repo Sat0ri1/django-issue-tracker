@@ -1,21 +1,26 @@
-<div class="card" id="issue-{{ issue.pk }}">
-  <a href="{% url 'issue_detail' pk=issue.pk %}"><strong>{{ issue.title }}</strong></a>
-  <div>{{ issue.description|linebreaksbr }}</div>
-  <div>
-    <span class="badge {{ issue.status }}">{{ issue.get_status_display }}</span>
-    {% if issue.assignee %} - przypisany do {{ issue.assignee.username }}{% endif %}
-    {% if issue.author %} - autor: {{ issue.author.username }}{% endif %}
-  </div>
-  <!-- HTMX formularz zmiany statusu -->
-  <div>
-    <form hx-post="{% url 'change_status' pk=issue.pk %}" hx-swap="outerHTML" style="display:inline">
-      {% csrf_token %}
-      <select name="status">
-        {% for val, label in issue.STATUS_CHOICES %}
-          <option value="{{ val }}" {% if issue.status == val %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-      <button type="submit">Zmień</button>
-    </form>
+<div class="card bg-white shadow p-4 rounded" id="issue-{{ issue.pk }}">
+  <div class="flex justify-between items-center">
+    <div>
+      <strong class="text-lg">{{ issue.title }}</strong>
+      <p class="text-gray-500 text-sm">{{ issue.description|linebreaksbr }}</p>
+      <p class="text-gray-400 text-xs">
+        Status: <span class="badge {{ issue.status|lower }}">{{ issue.get_status_display }}</span>
+        {% if issue.assignee %}- assigned to {{ issue.assignee.username }}{% endif %}
+        {% if issue.author %}- autor: {{ issue.author.username }}{% endif %}
+      </p>
+    </div>
+    
+    <!-- Formularz zmiany statusu HTMX -->
+    {% if user.is_authenticated %}
+      <form hx-post="{% url 'change_status' pk=issue.pk %}" hx-swap="outerHTML">
+        {% csrf_token %}
+        <select name="status" class="border rounded px-2 py-1">
+          {% for val, label in issue.STATUS_CHOICES %}
+            <option value="{{ val }}" {% if issue.status == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="ml-2 bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">Change status</button>
+      </form>
+    {% endif %}
   </div>
 </div>

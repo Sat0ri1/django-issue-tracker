@@ -15,7 +15,7 @@ def test_create_issue_requires_login(client):
     project = Project.objects.create(name="P2")
     url = reverse("create_issue", kwargs={"project_pk": project.pk})
     response = client.post(url, {"title": "Test", "description": "Test"})
-    assert response.status_code == 302  # przekierowanie na login
+    assert response.status_code == 302
 
 @pytest.mark.django_db
 def test_add_comment_requires_login(client):
@@ -23,7 +23,7 @@ def test_add_comment_requires_login(client):
     issue = Issue.objects.create(project=project, title="Bug", description="desc")
     url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
     response = client.post(url, {"text": "Komentarz"})
-    assert response.status_code == 302  # przekierowanie na login
+    assert response.status_code == 302
 
 @pytest.mark.django_db
 def test_change_status_requires_login(client):
@@ -31,23 +31,23 @@ def test_change_status_requires_login(client):
     issue = Issue.objects.create(project=project, title="Bug", description="desc")
     url = reverse("change_status", kwargs={"pk": issue.pk})
     response = client.post(url, {"status": "done"})
-    assert response.status_code == 302  # przekierowanie na login
+    assert response.status_code == 302
 
 @pytest.mark.django_db
 def test_create_issue_logged_in(client):
     user = User.objects.create_user(username="tester", password="pass")
-    client.login(username=user.username, password="pass")  # użycie user
+    client.login(username=user.username, password="pass")
     project = Project.objects.create(name="P5")
     url = reverse("create_issue", kwargs={"project_pk": project.pk})
     response = client.post(url, {"title": "BugY", "description": "desc"})
-    assert response.status_code == 302  # przekierowanie po poprawnym utworzeniu
+    assert response.status_code == 302
     issue = Issue.objects.get(title="BugY")
     assert issue.project == project
 
 @pytest.mark.django_db
 def test_add_comment_logged_in(client):
     user = User.objects.create_user(username="commenter", password="pass")
-    client.login(username=user.username, password="pass")  # użycie user
+    client.login(username=user.username, password="pass")
     project = Project.objects.create(name="P6")
     issue = Issue.objects.create(project=project, title="Bug", description="desc")
     url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
@@ -60,7 +60,7 @@ def test_add_comment_logged_in(client):
 @pytest.mark.django_db
 def test_change_status_logged_in(client):
     user = User.objects.create_user(username="tester2", password="pass")
-    client.login(username=user.username, password="pass")  # użycie user
+    client.login(username=user.username, password="pass")
     project = Project.objects.create(name="P7")
     issue = Issue.objects.create(project=project, title="Bug", description="desc")
     url = reverse("change_status", kwargs={"pk": issue.pk})
@@ -68,3 +68,13 @@ def test_change_status_logged_in(client):
     assert response.status_code == 302
     issue.refresh_from_db()
     assert issue.status == "done"
+
+@pytest.mark.django_db
+def test_logout_logs_user_out(client):
+    user = User.objects.create_user(username="u1", password="pass")
+    client.login(username="u1", password="pass")
+    r = client.get(reverse("project_list"))
+    assert r.wsgi_request.user.is_authenticated
+    response = client.post(reverse("logout"))
+    assert response.status_code == 302
+    assert not response.wsgi_request.user.is_authenticated
