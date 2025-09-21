@@ -72,9 +72,10 @@ def test_change_status_logged_in(client):
 @pytest.mark.django_db
 def test_logout_logs_user_out(client):
     user = User.objects.create_user(username="u1", password="pass")
-    client.login(username="u1", password="pass")
+    client.login(username=user.username, password="pass")
     r = client.get(reverse("project_list"))
     assert r.wsgi_request.user.is_authenticated
     response = client.post(reverse("logout"))
-    assert response.status_code == 302
-    assert not response.wsgi_request.user.is_authenticated
+    assert response.status_code == 302 
+    r2 = client.get(reverse("project_list"))
+    assert not r2.wsgi_request.user.is_authenticated
