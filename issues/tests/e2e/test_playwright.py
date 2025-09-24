@@ -265,9 +265,16 @@ def test_change_status_allowed(page: Page, live_server, issue, role):
     page.fill("input[name='password']", "pass")
     page.click("button[type='submit']")
 
-    page.goto(f"{live_server.url}/issues/{issue.pk}/change-status/")
+    # ZMIANA: Idź na stronę szczegółów issue (gdzie jest formularz)
+    page.goto(f"{live_server.url}/issues/{issue.pk}/")
+    
+    # Znajdź select status w formularzu na stronie issue detail
     page.select_option("select[name='status']", "done")
-    page.click("button[type='submit']")
+    
+    # Znajdź przycisk zmiany statusu (nie tworzenia issue!)
+    page.click("button[type='submit']:has-text('Change')")  # lub jakikolwiek tekst przycisku
+    page.wait_for_load_state("networkidle")
+    
     issue.refresh_from_db()
     assert issue.status == "done"
 
@@ -279,9 +286,10 @@ def test_change_status_forbidden_for_regular_user(page: Page, live_server, issue
     page.fill("input[name='password']", "password123")
     page.click("button[type='submit']")
 
-    page.goto(f"{live_server.url}/issues/{issue.pk}/change-status/")
+    # ZMIANA: Idź na stronę issue detail
+    page.goto(f"{live_server.url}/issues/{issue.pk}/")
     
-    # Check if form exists at all (might be 403)
+    # Sprawdź czy select status w ogóle istnieje (powinien być ukryty dla reporter)
     content = page.content()
     if "select[name='status']" in content:
         page.select_option("select[name='status']", "done")

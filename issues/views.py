@@ -135,7 +135,6 @@ def add_comment(request, issue_pk):
 @login_required
 def change_status(request, pk):
     issue = get_object_or_404(Issue, pk=pk)
-    # Dodaj sprawdzenie roli!
     if not (hasattr(request.user, "role") and request.user.role in ("admin", "assignee")):
         return HttpResponseForbidden(_("Only assignees and admins can change status."))
     if request.method == "POST":
@@ -146,6 +145,9 @@ def change_status(request, pk):
         if request.headers.get("HX-Request"):
             return render(request, "issues/_issue_item.html", {"issue": issue})
         return redirect("issues_list")
+    else:
+        # GET request - redirect to issue detail
+        return redirect("issue_detail", pk=pk)
 
 
 @login_required
