@@ -13,4 +13,5 @@ dependencies = [
     "ruff>=0.13.0",
     "django-environ",
     "django-widget-tweaks",
+    "pytest-playwright",
 ]
