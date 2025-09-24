@@ -146,11 +146,6 @@ def test_create_project_requires_login(page: Page, live_server):
 
 @pytest.mark.django_db(transaction=True)
 def test_create_project_allowed_for_admin(page: Page, live_server, admin_user):
-    # DEBUG: Sprawdź czy user to faktycznie admin
-    print(f"DEBUG: Admin user role: {admin_user.role}")
-    print(f"DEBUG: Admin user is_superuser: {admin_user.is_superuser}")
-    print(f"DEBUG: Admin user is_staff: {admin_user.is_staff}")
-    
     page.goto(f"{live_server.url}/login/")
     page.fill("input[name='username']", admin_user.username)
     page.fill("input[name='password']", "password123")
@@ -158,35 +153,17 @@ def test_create_project_allowed_for_admin(page: Page, live_server, admin_user):
 
     page.goto(f"{live_server.url}/projects/create/")
     
-    # Sprawdź czy użytkownik ma dostęp do strony
-    if "403" in page.content() or "login" in page.url:
-        print("DEBUG: User doesn't have access to create project page")
-        print(f"DEBUG: Current URL: {page.url}")
-        print(f"DEBUG: Page content: {page.content()[:500]}")
-    
     page.fill("input[name='name']", "Admin Project")
     page.fill("textarea[name='description']", "Admin project description")
     
-    # DEBUG: Sprawdź response po submit
-    with page.expect_response("**") as response_info:
-        page.click("button[type='submit']")
-    
-    response = response_info.value
-    print(f"DEBUG: Response status: {response.status}")
-    print(f"DEBUG: Response URL: {response.url}")
+    # Użyj bardziej specyficznego selektora - przycisk z tekstem "Create Project"
+    page.click("button:has-text('Create Project')")
+    # LUB alternatywnie:
+    # page.click("form:has(input[name='name']) button[type='submit']")
     
     page.wait_for_load_state("networkidle")
     
-    # Sprawdź czy są błędy na stronie
-    content = page.content()
-    if "error" in content.lower() or "required" in content.lower():
-        print(f"DEBUG: Form validation errors: {content[:1000]}")
-    
-    # Sprawdź wszystkie projekty
-    all_projects = list(Project.objects.values('name', 'description'))
-    print(f"DEBUG: All projects after submit: {all_projects}")
-    
-    assert project_exists("Admin Project"), f"Project not created. User role: {admin_user.role}"
+    assert project_exists("Admin Project")
 
 
 @pytest.mark.django_db(transaction=True)
