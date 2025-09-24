@@ -11,7 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DJANGO_SETTINGS_MODULE: config.settings
-      UV_CACHE_DIR: ${{ github.workspace }}/.cache/uv  # relative UV cache path
+      UV_CACHE_DIR: ${{ github.workspace }}/.cache/uv
+      SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}   # ← add your secret here
+      DEBUG: True
+      ALLOWED_HOSTS: localhost,127.0.0.1
 
     steps:
     - name: Checkout repository
@@ -32,7 +35,7 @@ jobs:
       uses: astral-sh/setup-uv@v6
       with:
         python-version: 3.11
-        enable-cache: true   # optional extra caching handled by action
+        enable-cache: true
 
     # Sync project (installs dependencies)
     - name: Install project dependencies
@@ -50,7 +53,7 @@ jobs:
     - name: Run Django tests
       run: uv run pytest
 
-    # Install Playwright browsers (cached)
+    # Install Playwright browsers
     - name: Install Playwright browsers
       run: uv run playwright install
 
