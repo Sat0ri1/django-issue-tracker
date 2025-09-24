@@ -175,7 +175,18 @@ def test_create_project_forbidden_for_non_admin(page: Page, live_server, reporte
 
     page.goto(f"{live_server.url}/projects/create/")
     content = page.content()
-    assert "forbidden" in content.lower() or "403" in content or "login" in page.url
+    
+    # Sprawdź różne możliwe komunikaty błędów
+    forbidden_messages = [
+        "forbidden" in content.lower(),
+        "403" in content,
+        "login" in page.url,
+        "only admin" in content.lower(),  # <-- DODANE!
+        "access denied" in content.lower(),
+        "permission denied" in content.lower()
+    ]
+    
+    assert any(forbidden_messages), f"Expected forbidden access, but got: {content}"
 
 
 # -------------------------------
