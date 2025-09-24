@@ -153,9 +153,10 @@ def test_create_project_allowed_for_admin(page: Page, live_server, admin_user):
 
     page.goto(f"{live_server.url}/projects/create/")
     
-    # DEBUG: Wyświetl cały formularz
-    print("DEBUG: Full form HTML:")
-    form_html = page.locator("form").inner_html()
+    # DEBUG: Znajdź konkretny formularz (ten z project name)
+    print("DEBUG: Project creation form HTML:")
+    project_form = page.locator("form").filter(has_text="Project name")
+    form_html = project_form.inner_html()
     print(form_html)
     
     # Wypełnij wszystkie pola
@@ -180,9 +181,12 @@ def test_create_project_allowed_for_admin(page: Page, live_server, admin_user):
     # Sprawdź zawartość strony po submit
     content = page.content()
     print(f"DEBUG: Current URL: {page.url}")
-    print(f"DEBUG: Page content (first 800 chars): {content[:800]}")
     
-    assert project_exists("Admin Project"), "Project was not created"
+    # Sprawdź czy są błędy formularza
+    if "error" in content.lower() or "required" in content.lower():
+        print(f"DEBUG: Form errors detected: {content[:800]}")
+    
+    assert project_exists("Admin Project"), f"Project not created. Projects: {all_projects}"
 
 
 @pytest.mark.django_db(transaction=True)
