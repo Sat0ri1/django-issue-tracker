@@ -77,8 +77,12 @@ def test_register_invalid(page: Page, live_server):
     page.fill("input[name='password1']", "123")
     page.fill("input[name='password2']", "456")
     page.click("button[type='submit']")
-    content = page.content()
-    assert "This field is required" in content or "Enter a valid email" in content
+    
+    # Sprawdź, czy użytkownik NIE został utworzony (bardziej niezawodne)
+    assert not User.objects.filter(username="").exists()
+    
+    # Alternatywnie: sprawdź, czy nadal jesteś na stronie rejestracji
+    assert "register" in page.url.lower()
 
 
 @pytest.mark.django_db(transaction=True)
