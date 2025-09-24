@@ -33,7 +33,6 @@ class TestHTMXViews:
 
     @pytest.fixture
     def user(self):
-        # fallback for tests that don't need roles 
         role = "admin" if user_model_has_role_field() else None
         return create_user("alice", "password123", role=role)
 
@@ -189,7 +188,7 @@ class TestHTMXViews:
         assert "Comments (" in content  # still shows comments section
 
     # ---------------------------
-    # change_status
+    # change_status - UPDATED FOR STATUS BADGE
     # ---------------------------
     def test_change_status_requires_login(self, client, issue):
         url = reverse("change_status", kwargs={"pk": issue.pk})
@@ -204,8 +203,11 @@ class TestHTMXViews:
         assert r.status_code == 200
         issue.refresh_from_db()
         assert issue.status == "in_progress"
-        # fragment HTMX zawiera tytuł issue
-        assert bytes(issue.title, encoding="utf-8") in r.content
+        
+        # ZMIANA: Teraz zwraca tylko status badge, nie cały issue item
+        content = r.content.decode("utf-8")
+        assert f'id="status-badge-{issue.pk}"' in content
+        assert "In progress" in content or "in_progress" in content
 
     @pytest.mark.parametrize("role", ["admin", "assignee"])
     def test_change_status_allowed_for_privileged_roles_htmx(self, client, issue, role):
@@ -222,10 +224,12 @@ class TestHTMXViews:
         issue.refresh_from_db()
         assert issue.status == "done"
         
-        # HTMX returns updated issue item
+        # ZMIANA: Sprawdza tylko status badge, nie cały content
         content = r.content.decode("utf-8")
-        assert issue.title in content
+        assert f'id="status-badge-{issue.pk}"' in content
         assert "Done" in content or "done" in content
+        # Sprawdza czy to jest span element z odpowiednimi klasami
+        assert 'class="badge badge-outline' in content
 
     def test_change_status_forbidden_for_regular_user_htmx(self, client, issue):
         if not user_model_has_role_field():
@@ -244,3 +248,26 @@ class TestHTMXViews:
         
         # Should return error or handle gracefully
         assert r.status_code in (403, 200, 302)
+
+    def test_change_status_htmx_returns_only_badge(self, client, user, issue):
+        """Test that HTMX change_status returns only the status badge, not full issue"""
+        client.login(username="alice", password="password123")
+        url = reverse("change_status", kwargs={"pk": issue.pk})
+        
+        r = client.post(url, {"status": "in_progress"}, HTTP_HX_REQUEST="true")
+        assert r.status_code == 200
+        
+        content = r.content.decode("utf-8")
+        
+        # Should contain ONLY the status badge
+        assert f'id="status-badge-{issue.pk}"' in content
+        assert 'class="badge badge-outline' in content
+        
+        # Should NOT contain other issue elements
+        assert issue.title not in content  # title nie ma być w response
+        assert issue.description not in content  # description nie ma być
+        assert 'class="card bg-gray-700' not in content  # nie ma być całe issue
+        
+        # Response should be minimal - just the badge
+
+        assert content.count('<span') == 1  # tylko jeden span element        assert content.count('<span') == 1  # tylko jeden span element
