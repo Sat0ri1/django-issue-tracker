@@ -209,6 +209,20 @@ def test_create_issue_logged_in(page: Page, live_server, project, db, role):
 
     page.goto(f"{live_server.url}/projects/{project.pk}/issues/create/")
     
+    # DEBUG: Sprawdź URL i dostęp
+    print(f"DEBUG: Current URL: {page.url}")
+    if "login" in page.url:
+        print(f"DEBUG: Redirected to login - user {user.username} not logged in properly")
+    
+    # DEBUG: Sprawdź formularz
+    print("DEBUG: Issue form HTML:")
+    try:
+        form_html = page.locator("form:has(input[name='title'])").inner_html()
+        print(form_html[:800])
+    except Exception as e:
+        print(f"DEBUG: Could not find form: {e}")
+        print(f"DEBUG: Page content: {page.content()[:500]}")
+    
     # Fill all required fields
     page.fill("input[name='title']", f"Issue by {role}")
     page.fill("textarea[name='description']", "Issue description")
@@ -216,16 +230,32 @@ def test_create_issue_logged_in(page: Page, live_server, project, db, role):
     # Check if project field exists and fill it
     if page.locator("select[name='project']").is_visible():
         page.select_option("select[name='project']", str(project.pk))
+        print("DEBUG: Project field filled")
     
     # Check if assignee field exists (for admin)
     if page.locator("select[name='assignee']").is_visible() and role == "admin":
+        print("DEBUG: Assignee field found")
         # Leave empty for auto-assignment or select specific user
         pass
     
-    page.click("button[type='submit']")
+    # Sprawdź liczbę issues przed submit
+    issues_before = Issue.objects.count()
+    print(f"DEBUG: Issues before submit: {issues_before}")
+    
+    # Użyj specyficznego selektora dla przycisku (jak w projektach)
+    page.click("button:has-text('Create')")  # lub inny tekst przycisku
     page.wait_for_load_state("networkidle")
     
-    assert issue_exists(f"Issue by {role}")
+    # Sprawdź po submit
+    issues_after = Issue.objects.count()
+    print(f"DEBUG: Issues after submit: {issues_after}")
+    print(f"DEBUG: Final URL: {page.url}")
+    
+    # Sprawdź wszystkie issues
+    all_issues = list(Issue.objects.values('title', 'description', 'author__username'))
+    print(f"DEBUG: All issues: {all_issues}")
+    
+    assert issue_exists(f"Issue by {role}"), f"Issue not created. All issues: {all_issues}"
 
 
 @pytest.mark.django_db(transaction=True)
