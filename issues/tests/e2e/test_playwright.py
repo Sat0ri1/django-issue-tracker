@@ -153,19 +153,12 @@ def test_create_project_allowed_for_admin(page: Page, live_server, admin_user):
 
     page.goto(f"{live_server.url}/projects/create/")
     
-    # Debug: sprawdź czy jesteś na właściwej stronie
-    print(f"DEBUG: Current URL after navigation: {page.url}")
-    
+    # Fill BOTH required fields
     page.fill("input[name='name']", "Admin Project")
+    page.fill("textarea[name='description']", "Admin project description")  # <-- DODANE!
+    
     page.click("button[type='submit']")
-    
-    # Debug: sprawdź URL po submit
-    print(f"DEBUG: URL after submit: {page.url}")
-    
-    # Debug: sprawdź zawartość strony po submit
-    if not project_exists("Admin Project"):
-        print("DEBUG: Page content after project creation attempt:")
-        print(page.content()[:1000])  # First 1000 characters
+    page.wait_for_load_state("networkidle")
     
     assert project_exists("Admin Project")
 
@@ -201,9 +194,23 @@ def test_create_issue_logged_in(page: Page, live_server, project, db, role):
     page.click("button[type='submit']")
 
     page.goto(f"{live_server.url}/projects/{project.pk}/issues/create/")
+    
+    # Fill all required fields
     page.fill("input[name='title']", f"Issue by {role}")
     page.fill("textarea[name='description']", "Issue description")
+    
+    # Check if project field exists and fill it
+    if page.locator("select[name='project']").is_visible():
+        page.select_option("select[name='project']", str(project.pk))
+    
+    # Check if assignee field exists (for admin)
+    if page.locator("select[name='assignee']").is_visible() and role == "admin":
+        # Leave empty for auto-assignment or select specific user
+        pass
+    
     page.click("button[type='submit']")
+    page.wait_for_load_state("networkidle")
+    
     assert issue_exists(f"Issue by {role}")
 
 
@@ -215,9 +222,17 @@ def test_create_issue_invalid_form(page: Page, live_server, project, reporter_us
     page.click("button[type='submit']")
 
     page.goto(f"{live_server.url}/projects/{project.pk}/issues/create/")
+    
+    # Fill invalid data (empty title)
     page.fill("input[name='title']", "")
     page.fill("textarea[name='description']", "desc")
+    
+    # Fill project if needed
+    if page.locator("select[name='project']").is_visible():
+        page.select_option("select[name='project']", str(project.pk))
+    
     page.click("button[type='submit']")
+    page.wait_for_load_state("networkidle")
 
     # Check that issue was NOT created (more reliable)
     assert not issue_exists("")
