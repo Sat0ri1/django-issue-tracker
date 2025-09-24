@@ -33,6 +33,9 @@ def issue_exists(title):
 def comment_exists(issue, text, author):
     return Comment.objects.filter(issue=issue, text=text, author=author).exists()
 
+@sync_to_async
+def refresh(obj):
+    obj.refresh_from_db()
 
 # -------------------------------
 # FIXTURES
@@ -57,7 +60,6 @@ async def project(db):
 async def issue(db, project, reporter_user):
     return await create_issue(project, reporter_user)
 
-
 # -------------------------------
 # AUTH TESTS
 # -------------------------------
@@ -72,7 +74,6 @@ async def test_register_valid(page: Page, live_server):
     await page.click("button[type='submit']")
     assert await User.objects.filter(username="play_user").aexists()
 
-
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
 async def test_register_invalid(page: Page, live_server):
@@ -85,7 +86,6 @@ async def test_register_invalid(page: Page, live_server):
     content = await page.content()
     assert "This field is required" in content or "Enter a valid email" in content
 
-
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
 async def test_logout_logs_user_out(page: Page, live_server, reporter_user):
@@ -93,10 +93,9 @@ async def test_logout_logs_user_out(page: Page, live_server, reporter_user):
     await page.fill("input[name='username']", reporter_user.username)
     await page.fill("input[name='password']", "password123")
     await page.click("button[type='submit']")
-    assert await page.locator("text=Wyloguj").is_visible()
-    await page.click("text=Wyloguj")
-    assert await page.locator("text=Zaloguj").is_visible()
-
+    assert await page.locator("text=Logout").is_visible()
+    await page.click("text=Logout")
+    assert await page.locator("text=Login").is_visible()
 
 # -------------------------------
 # PROJECT CREATION
@@ -106,7 +105,6 @@ async def test_logout_logs_user_out(page: Page, live_server, reporter_user):
 async def test_create_project_requires_login(page: Page, live_server):
     await page.goto(f"{live_server.url}/projects/create/")
     assert "login" in page.url
-
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
@@ -121,7 +119,6 @@ async def test_create_project_allowed_for_admin(page: Page, live_server, admin_u
     await page.click("button[type='submit']")
     assert await project_exists("Admin Project")
 
-
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
 async def test_create_project_forbidden_for_non_admin(page: Page, live_server, reporter_user):
@@ -134,7 +131,6 @@ async def test_create_project_forbidden_for_non_admin(page: Page, live_server, r
     content = await page.content()
     assert "forbidden" in content.lower() or "403" in content or "login" not in page.url
 
-
 # -------------------------------
 # ISSUE CREATION
 # -------------------------------
@@ -143,7 +139,6 @@ async def test_create_project_forbidden_for_non_admin(page: Page, live_server, r
 async def test_create_issue_requires_login(page: Page, live_server, project):
     await page.goto(f"{live_server.url}/projects/{project.pk}/issues/create/")
     assert "login" in page.url
-
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
@@ -161,7 +156,6 @@ async def test_create_issue_logged_in(page: Page, live_server, project, db, role
     await page.click("button[type='submit']")
     assert await issue_exists(f"Issue by {role}")
 
-
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
 async def test_create_issue_invalid_form(page: Page, live_server, project, reporter_user):
@@ -178,7 +172,6 @@ async def test_create_issue_invalid_form(page: Page, live_server, project, repor
     content = await page.content()
     assert "This field is required" in content or "title" in content.lower()
 
-
 # -------------------------------
 # STATUS CHANGE
 # -------------------------------
@@ -187,7 +180,6 @@ async def test_create_issue_invalid_form(page: Page, live_server, project, repor
 async def test_change_status_requires_login(page: Page, live_server, issue):
     await page.goto(f"{live_server.url}/issues/{issue.pk}/change-status/")
     assert "login" in page.url
-
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
@@ -202,9 +194,8 @@ async def test_change_status_allowed(page: Page, live_server, issue, role):
     await page.goto(f"{live_server.url}/issues/{issue.pk}/change-status/")
     await page.select_option("select[name='status']", "done")
     await page.click("button[type='submit']")
-    await sync_to_async(issue.refresh_from_db)()
+    await refresh(issue)
     assert issue.status == "done"
-
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
@@ -217,9 +208,8 @@ async def test_change_status_forbidden_for_regular_user(page: Page, live_server,
     await page.goto(f"{live_server.url}/issues/{issue.pk}/change-status/")
     await page.select_option("select[name='status']", "done")
     await page.click("button[type='submit']")
-    await sync_to_async(issue.refresh_from_db)()
+    await refresh(issue)
     assert issue.status != "done"
-
 
 # -------------------------------
 # COMMENTS & HTMX
@@ -229,7 +219,6 @@ async def test_change_status_forbidden_for_regular_user(page: Page, live_server,
 async def test_add_comment_requires_login(page: Page, live_server, issue):
     await page.goto(f"{live_server.url}/issues/{issue.pk}/comments/add/")
     assert "login" in page.url
-
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
@@ -250,7 +239,6 @@ async def test_add_comment_allowed(page: Page, live_server, issue, role):
     content = await page.content()
     assert f"Comment by {role}" in content
 
-
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
 async def test_add_comment_forbidden_for_regular_user(page: Page, live_server, issue, reporter_user):
@@ -263,7 +251,6 @@ async def test_add_comment_forbidden_for_regular_user(page: Page, live_server, i
     await page.fill("textarea[name='text']", "Blocked comment")
     await page.click("button[type='submit']")
     assert not await comment_exists(issue, "Blocked comment", reporter_user)
-
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
