@@ -57,9 +57,9 @@ jobs:
     - name: Install Playwright browsers
       run: uv run playwright install
 
-    # Run Playwright E2E tests (tylko e2e)
+    # Run Playwright E2E tests
     - name: Run Playwright tests
-      run: uv run pytest --maxfail=1 --disable-warnings --tb=short issues/tests/e2e
+      run: uv run pytest -p no:asyncio --maxfail=1 --disable-warnings --tb=short issues/tests/e2e
 
     # Minimize UV cache at the end of job
     - name: Prune UV cache
