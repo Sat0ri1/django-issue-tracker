@@ -33,7 +33,7 @@ class TestHTMXViews:
 
     @pytest.fixture
     def user(self):
-        # fallback for tests that don't need roles - ale daj rolę jeśli potrzebna
+        # fallback for tests that don't need roles 
         role = "admin" if user_model_has_role_field() else None
         return create_user("alice", "password123", role=role)
 
@@ -81,7 +81,7 @@ class TestHTMXViews:
         if not user_model_has_role_field():
             pytest.skip("User model has no 'role' field - role test skipped.")
         
-        user = create_user(username, "password123", role=role)
+        create_user(username, "password123", role=role)
         client.login(username=username, password="password123")
         url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
         
@@ -90,7 +90,7 @@ class TestHTMXViews:
         assert r.status_code == 200
         
         # Comment created
-        assert Comment.objects.filter(issue=issue, text=f"Comment by {role}", author=user).exists()
+        assert Comment.objects.filter(issue=issue, text=f"Comment by {role}", author__username=username).exists()
         
         # HTMX response contains updated comments section
         content = r.content.decode("utf-8")
@@ -103,7 +103,7 @@ class TestHTMXViews:
         if not user_model_has_role_field():
             pytest.skip("User model has no 'role' field - role test skipped.")
         
-        user = create_user("reporter", "password123", role="reporter")
+        create_user("reporter", "password123", role="reporter")
         client.login(username="reporter", password="password123")
         url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
         
@@ -119,7 +119,7 @@ class TestHTMXViews:
         if not user_model_has_role_field():
             pytest.skip("User model has no 'role' field - role test skipped.")
         
-        admin = create_user("admin_test", "password123", role="admin")
+        create_user("admin_test", "password123", role="admin")
         client.login(username="admin_test", password="password123")
         url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
         
@@ -147,7 +147,7 @@ class TestHTMXViews:
         if not user_model_has_role_field():
             pytest.skip("User model has no 'role' field - role test skipped.")
         
-        admin = create_user("admin_enter", "password123", role="admin")
+        create_user("admin_enter", "password123", role="admin")
         client.login(username="admin_enter", password="password123")
         url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
         
@@ -172,7 +172,7 @@ class TestHTMXViews:
         if not user_model_has_role_field():
             pytest.skip("User model has no 'role' field - role test skipped.")
         
-        admin = create_user("admin_invalid", "password123", role="admin")
+        create_user("admin_invalid", "password123", role="admin")
         client.login(username="admin_invalid", password="password123")
         url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
         
@@ -212,7 +212,7 @@ class TestHTMXViews:
         if not user_model_has_role_field():
             pytest.skip("User model has no 'role' field - role test skipped.")
         
-        user = create_user(f"user_{role}", "password123", role=role)
+        create_user(f"user_{role}", "password123", role=role)
         client.login(username=f"user_{role}", password="password123")
         url = reverse("change_status", kwargs={"pk": issue.pk})
         
@@ -231,7 +231,7 @@ class TestHTMXViews:
         if not user_model_has_role_field():
             pytest.skip("User model has no 'role' field - role test skipped.")
         
-        user = create_user("reporter_status", "password123", role="reporter")
+        create_user("reporter_status", "password123", role="reporter")
         client.login(username="reporter_status", password="password123")
         url = reverse("change_status", kwargs={"pk": issue.pk})
         

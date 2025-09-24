@@ -4,7 +4,7 @@ from django.http import HttpResponseForbidden
 from django.contrib.auth import get_user_model
 from django.db.models import Count
 from django.utils.translation import gettext as _
-from .models import Project, Issue, Comment
+from .models import Project, Issue
 from .forms import IssueForm, CommentForm, ProjectForm, CustomUserCreationForm
 
 CustomUser = get_user_model()
@@ -167,7 +167,7 @@ def register(request):
     if request.method == "POST":
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
+            form.save()
             return redirect("login")
     else:
         form = CustomUserCreationForm()
