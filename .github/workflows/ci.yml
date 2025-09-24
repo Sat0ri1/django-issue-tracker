@@ -49,17 +49,17 @@ jobs:
     - name: Run Mypy
       run: uv run mypy issues --ignore-missing-imports
 
-    # Run Django unit tests
+    # Run Django unit tests (bez e2e)
     - name: Run Django tests
-      run: uv run pytest
+      run: uv run pytest issues/tests/test_htmx_views.py issues/tests/test_models.py issues/tests/test_views.py
 
     # Install Playwright browsers
     - name: Install Playwright browsers
       run: uv run playwright install
 
-    # Run Playwright E2E tests
+    # Run Playwright E2E tests (tylko e2e)
     - name: Run Playwright tests
-      run: uv run pytest --maxfail=1 --disable-warnings --tb=short tests/e2e
+      run: uv run pytest --maxfail=1 --disable-warnings --tb=short issues/tests/e2e
 
     # Minimize UV cache at the end of job
     - name: Prune UV cache
