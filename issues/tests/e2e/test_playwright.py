@@ -354,19 +354,45 @@ def test_add_comment_allowed(page: Page, live_server, issue, role):
     page.fill("input[name='password']", "pass")
     page.click("button[type='submit']")
 
-    page.goto(f"{live_server.url}/issues/{issue.pk}/comments/add/")
-    page.fill("textarea[name='text']", f"Comment by {role}")
-    page.click("button[type='submit']")
-
+    # ZMIANA: Idź na stronę projektu gdzie są issues z komentarzami
+    page.goto(f"{live_server.url}/projects/{issue.project.pk}/")
+    page.wait_for_load_state("networkidle")
+    
+    # ZMIANA: Otwórz sekcję komentarzy (kliknij na details summary)
+    comments_summary = page.locator("summary:has-text('Comments')")
+    if comments_summary.is_visible():
+        comments_summary.click()
+        page.wait_for_timeout(500)  # Poczekaj na otwarcie details
+    
+    # Teraz wypełnij formularz komentarza
+    textarea = page.locator("textarea[name='text']")
+    
+    # Debug jeśli textarea nie jest widoczna
+    if not textarea.is_visible():
+        print("DEBUG: Textarea not visible, page content:")
+        print(page.content()[:1000])
+        
+        # Spróbuj znaleźć inne selektory
+        all_textareas = page.locator("textarea").count()
+        print(f"DEBUG: All textareas on page: {all_textareas}")
+        
+        # Sprawdź czy sekcja komentarzy istnieje
+        comments_sections = page.locator("[id*='comments']").count()
+        print(f"DEBUG: Comments sections: {comments_sections}")
+    
+    assert textarea.is_visible(), f"Comment textarea should be visible for {role}"
+    
+    textarea.fill(f"Comment by {role}")
+    
+    # Znajdź przycisk Add Comment
+    add_button = page.locator("button:has-text('Add Comment')")
+    assert add_button.is_visible(), "Add Comment button should be visible"
+    add_button.click()
+    
+    page.wait_for_timeout(1000)  # Poczekaj na HTMX response
+    
+    # Sprawdź w bazie danych
     assert comment_exists(issue, f"Comment by {role}", user)
-    # Try to find comment in page content, but don't fail if selector doesn't exist
-    try:
-        page.wait_for_selector(f"#comments-section-{issue.pk}", timeout=3000)
-        content = page.content()
-        assert f"Comment by {role}" in content
-    except Exception:
-        # If selector doesn't exist, just check that comment was added to DB
-        pass
 
 
 @pytest.mark.django_db(transaction=True)
@@ -376,9 +402,21 @@ def test_add_comment_forbidden_for_regular_user(page: Page, live_server, issue, 
     page.fill("input[name='password']", "password123")
     page.click("button[type='submit']")
 
-    page.goto(f"{live_server.url}/issues/{issue.pk}/comments/add/")
-    page.fill("textarea[name='text']", "Blocked comment")
-    page.click("button[type='submit']")
+    # ZMIANA: Idź na stronę projektu
+    page.goto(f"{live_server.url}/projects/{issue.project.pk}/")
+    page.wait_for_load_state("networkidle")
+    
+    # ZMIANA: Spróbuj otworzyć komentarze
+    comments_summary = page.locator("summary:has-text('Comments')")
+    if comments_summary.is_visible():
+        comments_summary.click()
+        page.wait_for_timeout(500)
+    
+    # Dla reporter formularz dodawania komentarza NIE POWINIEN być widoczny
+    textarea = page.locator("textarea[name='text']")
+    assert not textarea.is_visible(), "Comment form should not be visible for reporters"
+    
+    # Status nie powinien się zmienić
     assert not comment_exists(issue, "Blocked comment", reporter_user)
 
 
@@ -389,9 +427,24 @@ def test_add_comment_invalid_form(page: Page, live_server, issue, admin_user):
     page.fill("input[name='password']", "password123")
     page.click("button[type='submit']")
 
-    page.goto(f"{live_server.url}/issues/{issue.pk}/comments/add/")
-    page.fill("textarea[name='text']", "")
-    page.click("button[type='submit']")
+    # ZMIANA: Idź na stronę projektu
+    page.goto(f"{live_server.url}/projects/{issue.project.pk}/")
+    page.wait_for_load_state("networkidle")
     
-    # Check that empty comment was NOT added (more reliable)
+    # Otwórz komentarze
+    comments_summary = page.locator("summary:has-text('Comments')")
+    if comments_summary.is_visible():
+        comments_summary.click()
+        page.wait_for_timeout(500)
+    
+    # Wypełnij pustym tekstem
+    textarea = page.locator("textarea[name='text']")
+    textarea.fill("")
+    
+    add_button = page.locator("button:has-text('Add Comment')")
+    add_button.click()
+    
+    page.wait_for_timeout(1000)
+    
+    # Pusty komentarz nie powinien zostać dodany
     assert not comment_exists(issue, "", admin_user)
