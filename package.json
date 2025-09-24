@@ -1,0 +1,27 @@
+{
+  "name": "django-issue-tracker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:css": "tailwindcss -i ./src/input.css -o ./static/css/tailwind.css --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sat0ri1/django-issue-tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Sat0ri1/django-issue-tracker/issues"
+  },
+  "homepage": "https://github.com/Sat0ri1/django-issue-tracker#readme",
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "daisyui": "^5.1.14",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17"
+  }
+}

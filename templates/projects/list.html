@@ -1,19 +1,24 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}Projects{% endblock %}
+{% block title %}{% trans "Projects" %}{% endblock %}
 
 {% block content %}
-<h1 class="text-3xl font-bold text-center mb-6">Project list</h1>
+<div class="text-center mb-8">
+  <h1 class="text-4xl font-bold text-gray-800 mb-2 tracking-wide">{% trans "PROJECT LIST" %}</h1>
+  <div class="w-24 h-1 bg-gradient-to-r from-gray-600 to-gray-400 mx-auto rounded-full"></div>
+</div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
   {% for project in projects %}
-    <a href="{% url 'project_detail' pk=project.pk %}" 
-       class="block p-4 bg-white rounded shadow hover:bg-blue-50 transition">
-      <h2 class="text-xl font-semibold text-gray-800">{{ project.name }}</h2>
-      <p class="text-gray-500 text-sm">{{ project.created_at|date:"Y-m-d H:i" }}</p>
+    <a href="{% url 'project_detail' pk=project.pk %}" class="card bg-gray-700 shadow-xl hover:scale-105 transition-transform duration-200">
+      <div class="card-body p-6">
+        <h2 class="card-title text-white mb-2">{{ project.name }}</h2>
+        <p class="text-white/70 text-sm">{{ project.created_at|date:"Y-m-d H:i" }}</p>
+      </div>
     </a>
   {% empty %}
-    <p class="text-gray-500 text-center col-span-full">No projects</p>
+    <p class="text-gray-500 text-center col-span-full">{% trans "No projects" %}</p>
   {% endfor %}
 </div>
 {% endblock %}

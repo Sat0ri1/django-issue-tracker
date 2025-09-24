@@ -1,18 +1,14 @@
-{% extends "base.html" %}
-{% block title %}Projekt: {{ project.name }}{% endblock %}
-{% block content %}
-<h1>{{ project.name }}</h1>
-<p>{{ project.description|linebreaksbr }}</p>
-
-<h2>Dodaj zgłoszenie</h2>
-<form hx-post="{% url 'create_issue' project.pk %}" hx-swap="afterbegin">
-  {% csrf_token %}
-  {{ issue_form.as_p }}
-  <button type="submit">Dodaj</button>
-</form>
-
-<h2>Zgłoszenia</h2>
-<div id="issues-list">
-  {% include "issues/_issue_list.html" %}
+<!-- filepath: templates/issues/_issue_list.html -->
+<div id="issues-list" class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+  {% for issue in issues %}
+    <div id="issue-container-{{ issue.pk }}" class="flex flex-col">
+      {% include "issues/_issue_item.html" %}
+    </div>
+  {% empty %}
+    <div class="text-center py-12">
+      <div class="text-6xl mb-4">📝</div>
+      <p class="text-lg text-gray-600 mb-2">{% trans "No issues yet" %}</p>
+      <p class="text-sm text-gray-500">{% trans "Start by creating your first issue" %}</p>
+    </div>
+  {% endfor %}
 </div>
-{% endblock %}

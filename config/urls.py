@@ -19,6 +19,7 @@ from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from issues import views as issues_views
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("", include("issues.urls")),
@@ -37,4 +38,7 @@ urlpatterns = [
 
     # rejestracja
     path("register/", issues_views.register, name="register"),
+
+    # przełącznik języków (set_language)
+    path('i18n/', include('django.conf.urls.i18n')),
 ]

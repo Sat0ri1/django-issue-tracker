@@ -1,0 +1,67 @@
+<!-- filepath: d:\projekty\django-issue-tracker\templates\projects\create.html -->
+{% extends "base.html" %}
+{% load widget_tweaks %}
+{% load i18n %}
+
+{% block title %}{% trans "Add Project" %}{% endblock %}
+
+{% block content %}
+<div class="text-center mb-8">
+  <h1 class="text-4xl font-bold text-gray-800 mb-2 tracking-wide">{% trans "ADD PROJECT" %}</h1>
+  <div class="w-28 h-1 bg-gradient-to-r from-gray-600 to-gray-400 mx-auto rounded-full"></div>
+</div>
+
+<div class="max-w-md mx-auto bg-gray-700 rounded-lg shadow-xl p-8">
+  <form method="post" class="space-y-6">
+    {% csrf_token %}
+    
+    <!-- Name field -->
+    {% with project_name_placeholder=_("Enter project name") %}
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text text-white font-medium">{{ form.name.label }}</span>
+      </label>
+      {% render_field form.name class="input input-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-400 focus:ring-2 focus:ring-gray-400" placeholder=project_name_placeholder %}
+      {% if form.name.errors %}
+        <label class="label">
+          <span class="label-text-alt text-red-400">{{ form.name.errors.0 }}</span>
+        </label>
+      {% endif %}
+    </div>
+    {% endwith %}
+
+    <!-- Description field -->
+    {% with project_desc_placeholder=_("Enter project description") %}
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text text-white font-medium">{{ form.description.label }}</span>
+      </label>
+      {% render_field form.description class="textarea textarea-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-400 focus:ring-2 focus:ring-gray-400" placeholder=project_desc_placeholder rows="4" %}
+      {% if form.description.errors %}
+        <label class="label">
+          <span class="label-text-alt text-red-400">{{ form.description.errors.0 }}</span>
+        </label>
+      {% endif %}
+    </div>
+    {% endwith %}
+
+    <!-- Submit button -->
+    <button type="submit" class="btn bg-gray-200 text-gray-700 border-none rounded-lg shadow-md hover:bg-gray-300 hover:shadow-lg transition-all duration-300 ease-out transform hover:-translate-y-0.5 w-full px-6 mt-6">
+      <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+      </svg>
+      {% trans "Create Project" %}
+    </button>
+  </form>
+
+  <!-- Back link -->
+  <div class="text-center mt-6 pt-6 border-t border-gray-600">
+    <a href="{% url 'project_list' %}" class="btn bg-gray-600 text-white border-none rounded-lg shadow-md hover:bg-gray-500 hover:shadow-lg transition-all duration-300 ease-out transform hover:-translate-y-0.5 px-6">
+      <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      {% trans "Back to Projects" %}
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -1,37 +1,80 @@
+{% load i18n %}
 <!doctype html>
-<html lang="pl">
+<html lang="{{ LANGUAGE_CODE }}" data-theme="abyss">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}Issue Tracker{% endblock %}</title>
-
-  <!-- Tailwind CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  {% load static %}
+  <link href="{% static 'css/tailwind.css' %}" rel="stylesheet">
   <!-- HTMX + Alpine -->
   <script src="https://unpkg.com/htmx.org@1.9.2"></script>
   <script src="https://unpkg.com/alpinejs@3.12.0/dist/cdn.min.js" defer></script>
+  {% block head %}{% endblock %}
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col">
+<body class="bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300 min-h-screen flex flex-col">
 
   <!-- Navbar -->
-  <nav class="bg-white shadow p-4 flex justify-between items-center">
-    <div class="flex space-x-4">
-      <a href="{% url 'project_list' %}" class="font-semibold text-lg text-gray-700 hover:text-blue-600">Projekty</a>
-      <a href="/admin/" class="text-gray-600 hover:text-blue-600">Admin</a>
+  <nav class="navbar bg-base-100/90 backdrop-blur-sm shadow mb-4 flex justify-between items-center px-4">
+    <div class="flex items-center gap-4">
+      <a href="{% url 'project_list' %}" class="btn btn-ghost normal-case text-2xl tracking-wide font-bold text-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-7 h-7 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a2 2 0 012-2h2a2 2 0 012 2v2m-6 4h6a2 2 0 002-2v-6a2 2 0 00-2-2h-2a2 2 0 00-2 2v6a2 2 0 002 2z" />
+        </svg>
+        Issue Tracker
+      </a>
+      <a href="/admin/" class="btn bg-gray-700 text-white border-none rounded-lg shadow-md hover:bg-gray-600 hover:shadow-lg transition-all duration-300 ease-out transform hover:-translate-y-0.5 px-6">
+        Admin
+      </a>
+      {% if user.is_authenticated and user.role == "admin" %}
+        <a href="{% url 'create_project' %}" class="btn bg-gray-700 text-white border-none rounded-lg shadow-md hover:bg-gray-600 hover:shadow-lg transition-all duration-300 ease-out transform hover:-translate-y-0.5 ml-2 px-6">
+          <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          {% trans "Add project" %}
+        </a>
+      {% endif %}
     </div>
-    <div class="flex items-center space-x-2">
+
+    <div class="flex items-center gap-2 pr-4">
       {% if user.is_authenticated %}
-        <span class="text-gray-700">Welcome, {{ user.username }}</span>
-        <form action="{% url 'logout' %}" method="post">
+        <span class="mr-3 text-base-content hidden md:inline text-sm">
+          {% trans "Welcome" %}, <b>{{ user.username }}</b>
+          <span class="opacity-60">({{ user.role|capfirst }})</span>
+        </span>
+        <form action="{% url 'logout' %}" method="post" class="inline">
           {% csrf_token %}
-          <button type="submit" class="text-blue-600 hover:text-blue-800 underline">Log out</button>
+          <button type="submit" class="btn bg-gray-700 text-white border-none rounded-lg shadow-md hover:bg-red-600 hover:shadow-lg transition-all duration-300 ease-out transform hover:-translate-y-0.5 px-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            {% trans "Log out" %}
+          </button>
         </form>
       {% else %}
-        <span class="text-gray-600">You must me logged in.</span>
-        <a href="{% url 'login' %}" class="text-blue-600 hover:text-blue-800 underline">Log in</a>
-        <span class="text-gray-500">/</span>
-        <a href="{% url 'register' %}" class="text-blue-600 hover:text-blue-800 underline">Register</a>
+        <a href="{% url 'login' %}" class="btn bg-gray-700 text-white border-none rounded-lg shadow-md hover:bg-gray-600 hover:shadow-lg transition-all duration-300 ease-out transform hover:-translate-y-0.5 px-6 mr-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+          </svg>
+          {% trans "Log in" %}
+        </a>
+        <a href="{% url 'register' %}" class="btn bg-gray-700 text-white border-none rounded-lg shadow-md hover:bg-gray-600 hover:shadow-lg transition-all duration-300 ease-out transform hover:-translate-y-0.5 px-6">
+          <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+          </svg>
+          {% trans "Register" %}
+        </a>
       {% endif %}
+
+      <!-- Language switcher -->
+      <form action="{% url 'set_language' %}" method="post" class="ml-4">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <select name="language" onchange="this.form.submit()" class="bg-gray-700 text-white rounded px-2 py-1">
+          <option value="en" {% if request.LANGUAGE_CODE == 'en' %}selected{% endif %}>English</option>
+          <option value="pl" {% if request.LANGUAGE_CODE == 'pl' %}selected{% endif %}>Polski</option>
+        </select>
+      </form>
     </div>
   </nav>
 
@@ -40,9 +83,10 @@
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="bg-white shadow p-4 text-center text-gray-500 text-sm">
-    &copy; {{ now.year }} Issue Tracker
+  <footer class="bg-base-100/90 backdrop-blur-sm shadow p-4 text-center text-base-content text-sm">
+    &copy; {% now "Y" %} Issue Tracker
   </footer>
 
+  {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -11,27 +11,54 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DJANGO_SETTINGS_MODULE: config.settings
+      UV_CACHE_DIR: ${{ github.workspace }}/.cache/uv  # relative UV cache path
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v5
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    # Restore UV cache
+    - name: Restore UV cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.UV_CACHE_DIR }}
+        key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+        restore-keys: |
+          uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          uv-${{ runner.os }}
+
+    # Install uv and Python
+    - name: Install uv and Python
+      uses: astral-sh/setup-uv@v6
       with:
         python-version: 3.11
+        enable-cache: true   # optional extra caching handled by action
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install uv ruff mypy  # jawnie instalujemy ruff i mypy
-        uv sync
+    # Sync project (installs dependencies)
+    - name: Install project dependencies
+      run: uv sync --locked --all-extras --dev
 
+    # Run linting
     - name: Run Ruff (lint)
-      run: ruff check issues
+      run: uv run ruff check issues
 
-    - name: Run Mypy (typy)
-      run: mypy issues --ignore-missing-imports # problem ze stubami w testach i brak w pip i uv
+    # Run type checking
+    - name: Run Mypy
+      run: uv run mypy issues --ignore-missing-imports
 
-    - name: Run tests
-      run: .venv/bin/python -m pytest
+    # Run Django unit tests
+    - name: Run Django tests
+      run: uv run pytest
+
+    # Install Playwright browsers (cached)
+    - name: Install Playwright browsers
+      run: uv run playwright install
+
+    # Run Playwright E2E tests
+    - name: Run Playwright tests
+      run: uv run pytest --maxfail=1 --disable-warnings --tb=short tests/e2e
+
+    # Minimize UV cache at the end of job
+    - name: Prune UV cache
+      if: always()
+      run: uv cache prune --ci

@@ -1,0 +1,286 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-24 02:22+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && "
+"(n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && "
+"n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
+#: .\issues\forms.py:17 .\issues\models.py:40
+msgid "Title"
+msgstr "Tytuł"
+
+#: .\issues\forms.py:18 .\issues\forms.py:59 .\issues\models.py:25
+#: .\issues\models.py:41
+msgid "Description"
+msgstr "Opis"
+
+#: .\issues\forms.py:19 .\issues\models.py:10 .\issues\models.py:44
+msgid "Assignee"
+msgstr "Pracownik"
+
+#: .\issues\forms.py:37 .\issues\models.py:59
+msgid "Comment"
+msgstr "Komentarz"
+
+#: .\issues\forms.py:41 .\issues\forms.py:48
+msgid "Email"
+msgstr "E-mail"
+
+#: .\issues\forms.py:47
+msgid "Username"
+msgstr "Nazwa użytkownika"
+
+#: .\issues\forms.py:49
+msgid "Password"
+msgstr "Hasło"
+
+#: .\issues\forms.py:50
+msgid "Repeat password"
+msgstr "Powtórz hasło"
+
+#: .\issues\forms.py:58 .\issues\models.py:24
+msgid "Project name"
+msgstr "Nazwa projektu"
+
+#: .\issues\models.py:9
+msgid "Administrator"
+msgstr "Administrator"
+
+#: .\issues\models.py:11
+msgid "Reporter"
+msgstr "Zgłaszający"
+
+#: .\issues\models.py:26 .\issues\models.py:49 .\issues\models.py:60
+msgid "Created at"
+msgstr "Utworzono"
+
+#: .\issues\models.py:34
+msgid "To Do"
+msgstr "Do zrobienia"
+
+#: .\issues\models.py:35
+msgid "In Progress"
+msgstr "W trakcie"
+
+#: .\issues\models.py:36
+msgid "Done"
+msgstr "Zrobione"
+
+#: .\issues\models.py:39
+msgid "Project"
+msgstr "Projekt"
+
+#: .\issues\models.py:42 .\templates\issues\detail.html:14
+msgid "Status"
+msgstr "Status"
+
+#: .\issues\models.py:47 .\issues\models.py:58
+#: .\templates\issues\_issue_item.html:46 .\templates\issues\detail.html:15
+msgid "Author"
+msgstr "Autor"
+
+#: .\issues\models.py:50
+msgid "Updated at"
+msgstr "Zaktualizowano"
+
+#: .\issues\models.py:57
+msgid "Issue"
+msgstr "Zgłoszenie"
+
+#: .\issues\models.py:63
+#, python-format
+msgid "Comment by %(author)s on %(issue)s"
+msgstr "Komentarz użytkownika %(author)s do zgłoszenia %(issue)s"
+
+#: .\issues\views.py:113
+msgid "Only assignees and admins can comment."
+msgstr "Tylko pracownicy i administratorzy mogą komentować."
+
+#: .\issues\views.py:147
+msgid "Only admin can add projects."
+msgstr "Tylko administrator może dodawać projekty."
+
+#: .\templates\auth\login.html:5 .\templates\auth\login.html:48
+#: .\templates\auth\register.html:98 .\templates\base.html:47
+msgid "Log in"
+msgstr "Zaloguj się"
+
+#: .\templates\auth\login.html:9
+msgid "LOG IN"
+msgstr "LOGOWANIE"
+
+#: .\templates\auth\login.html:54
+msgid "Don't have an account?"
+msgstr "Nie masz konta?"
+
+#: .\templates\auth\login.html:59
+msgid "Create account"
+msgstr "Utwórz konto"
+
+#: .\templates\auth\register.html:5
+msgid "Registration"
+msgstr "Rejestracja"
+
+#: .\templates\auth\register.html:9
+msgid "REGISTER"
+msgstr "REJESTRACJA"
+
+#: .\templates\auth\register.html:87 .\templates\base.html:51
+msgid "Register"
+msgstr "Zarejestruj się"
+
+#: .\templates\auth\register.html:93
+msgid "Already have an account?"
+msgstr "Masz już konto?"
+
+#: .\templates\base.html:5 .\templates\base.html:22
+msgid "Issue Tracker"
+msgstr "System zgłoszeń"
+
+#: .\templates\base.html:30
+msgid "Add project"
+msgstr "Dodaj projekt"
+
+#: .\templates\base.html:36
+msgid "Welcome"
+msgstr "Witaj"
+
+#: .\templates\base.html:41
+msgid "Log out"
+msgstr "Wyloguj się"
+
+#: .\templates\issues\_comment_item.html:5
+msgid "by"
+msgstr "przez"
+
+#: .\templates\issues\_comment_item.html:5 .\templates\issues\detail.html:15
+msgid "Anonymous"
+msgstr "Anonimowy"
+
+#: .\templates\issues\_comments_section.html:5
+#: .\templates\issues\detail.html:23
+#, python-format
+msgid "Comments (%(issue.comments.count)s)"
+msgstr "Komentarze (%(issue.comments.count)s)"
+
+#: .\templates\issues\_comments_section.html:31
+msgid "Write your comment..."
+msgstr "Napisz komentarz..."
+
+#: .\templates\issues\_comments_section.html:34
+msgid "+ Add comment"
+msgstr "+ Dodaj komentarz"
+
+#: .\templates\issues\_comments_section.html:41
+#: .\templates\issues\detail.html:56 .\templates\projects\detail.html:64
+msgid "You must"
+msgstr "Musisz"
+
+#: .\templates\issues\_comments_section.html:42
+#: .\templates\issues\detail.html:56 .\templates\projects\detail.html:64
+msgid "log in"
+msgstr "zalogować się"
+
+#: .\templates\issues\_comments_section.html:43
+#: .\templates\issues\detail.html:56
+msgid "to add a comment."
+msgstr "aby dodać komentarz."
+
+#: .\templates\issues\_comments_section.html:46
+#: .\templates\issues\detail.html:58
+msgid "Only assignees and admins can add comments."
+msgstr "Tylko pracownicy i administratorzy mogą dodawać komentarze."
+
+#: .\templates\issues\_issue_item.html:31
+msgid "Update"
+msgstr "Aktualizuj"
+
+#: .\templates\issues\_issue_item.html:39
+msgid "Assigned"
+msgstr "Przypisany"
+
+#: .\templates\issues\_issue_list.html:11 .\templates\projects\detail.html:80
+msgid "No issues yet"
+msgstr "Brak zgłoszeń"
+
+#: .\templates\issues\_issue_list.html:12 .\templates\projects\detail.html:81
+msgid "Start by creating your first issue"
+msgstr "Rozpocznij od utworzenia pierwszego zgłoszenia"
+
+#: .\templates\issues\detail.html:24
+msgid "click to toggle"
+msgstr "kliknij, aby rozwinąć"
+
+#: .\templates\issues\detail.html:32
+msgid "No comments"
+msgstr "Brak komentarzy"
+
+#: .\templates\issues\detail.html:38
+msgid "Add a comment"
+msgstr "Dodaj komentarz"
+
+#: .\templates\issues\detail.html:50
+msgid "Add comment"
+msgstr "Dodaj komentarz"
+
+#: .\templates\projects\create.html:6
+msgid "Add Project"
+msgstr "Dodaj projekt"
+
+#: .\templates\projects\create.html:10
+msgid "ADD PROJECT"
+msgstr "DODAJ PROJEKT"
+
+#: .\templates\projects\create.html:49
+msgid "Create Project"
+msgstr "Utwórz projekt"
+
+#: .\templates\projects\create.html:59
+msgid "Back to Projects"
+msgstr "Powrót do projektów"
+
+#: .\templates\projects\detail.html:11
+msgid "Created"
+msgstr "Utworzono"
+
+#: .\templates\projects\detail.html:17
+msgid "Add New Issue"
+msgstr "Dodaj nowe zgłoszenie"
+
+#: .\templates\projects\detail.html:58
+msgid "Add Issue"
+msgstr "Dodaj zgłoszenie"
+
+#: .\templates\projects\detail.html:64
+msgid "to add an issue."
+msgstr "aby dodać zgłoszenie."
+
+#: .\templates\projects\detail.html:70
+msgid "Issues"
+msgstr "Zgłoszenia"
+
+#: .\templates\projects\list.html:4
+msgid "Projects"
+msgstr "Projekty"
+
+#: .\templates\projects\list.html:8
+msgid "PROJECT LIST"
+msgstr "LISTA PROJEKTÓW"
+
+#: .\templates\projects\list.html:21
+msgid "No projects"
+msgstr "Brak projektów"
