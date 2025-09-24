@@ -1,7 +1,11 @@
+import os
 import pytest
 from playwright.sync_api import Page
 from django.contrib.auth import get_user_model
 from issues.models import Project, Issue, Comment
+
+# Pozwól na unsafe async operacje w Django dla testów Playwright
+os.environ.setdefault('DJANGO_ALLOW_ASYNC_UNSAFE', '1')
 
 User = get_user_model()
 
@@ -119,7 +123,7 @@ def test_create_project_forbidden_for_non_admin(page: Page, live_server, reporte
 
     page.goto(f"{live_server.url}/projects/create/")
     content = page.content()
-    assert "forbidden" in content.lower() or "403" in content or "login" not in page.url
+    assert "forbidden" in content.lower() or "403" in content or "login" in page.url
 
 
 # -------------------------------
