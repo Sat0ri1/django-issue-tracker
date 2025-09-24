@@ -207,7 +207,8 @@ class TestHTMXViews:
         # ZMIANA: Teraz zwraca tylko status badge, nie cały issue item
         content = r.content.decode("utf-8")
         assert f'id="status-badge-{issue.pk}"' in content
-        assert "In progress" in content or "in_progress" in content
+        # POPRAWKA: "In Progress" z wielką literą P
+        assert "In Progress" in content or "in_progress" in content
 
     @pytest.mark.parametrize("role", ["admin", "assignee"])
     def test_change_status_allowed_for_privileged_roles_htmx(self, client, issue, role):
