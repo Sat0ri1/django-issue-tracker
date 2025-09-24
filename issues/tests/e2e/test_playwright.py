@@ -265,14 +265,13 @@ def test_change_status_allowed(page: Page, live_server, issue, role):
     page.fill("input[name='password']", "pass")
     page.click("button[type='submit']")
 
-    # ZMIANA: Idź na stronę szczegółów issue (gdzie jest formularz)
-    page.goto(f"{live_server.url}/issues/{issue.pk}/")
+    # Idź na stronę z listą issues (gdzie jest _issue_item.html)
+    page.goto(f"{live_server.url}/issues/")
     
-    # Znajdź select status w formularzu na stronie issue detail
+    # Dla admin/assignee formularz POWINIEN być widoczny
+    page.wait_for_selector("select[name='status']")
     page.select_option("select[name='status']", "done")
-    
-    # Znajdź przycisk zmiany statusu (nie tworzenia issue!)
-    page.click("button[type='submit']:has-text('Change')")  # lub jakikolwiek tekst przycisku
+    page.click("button:has-text('Update')")
     page.wait_for_load_state("networkidle")
     
     issue.refresh_from_db()
@@ -286,17 +285,22 @@ def test_change_status_forbidden_for_regular_user(page: Page, live_server, issue
     page.fill("input[name='password']", "password123")
     page.click("button[type='submit']")
 
-    # ZMIANA: Idź na stronę issue detail
-    page.goto(f"{live_server.url}/issues/{issue.pk}/")
+    # Idź na stronę z listą issues
+    page.goto(f"{live_server.url}/issues/")
     
-    # Sprawdź czy select status w ogóle istnieje (powinien być ukryty dla reporter)
+    # Dla reporter formularz NIE POWINIEN być widoczny
     content = page.content()
-    if "select[name='status']" in content:
-        page.select_option("select[name='status']", "done")
-        page.click("button[type='submit']")
     
+    # Sprawdź czy formularz zmiany statusu jest NIEWIDOCZNY
+    assert not page.locator("select[name='status']").is_visible(), "Status form should not be visible for reporters"
+    
+    # Alternatywnie: sprawdź czy w HTML nie ma formularza
+    assert "select[name='status']" not in content, "Status select should not exist for reporters"
+    
+    # Status nie powinien się zmienić (pozostaje bez zmiany)
+    original_status = issue.status
     issue.refresh_from_db()
-    assert issue.status != "done"
+    assert issue.status == original_status
 
 
 # -------------------------------
