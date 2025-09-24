@@ -1,20 +1,17 @@
 {% load i18n %}
 <div class="space-y-0">
-  <!-- Issue card -->
   <div class="card bg-gray-700 shadow-xl hover:scale-105 transition-transform duration-200 p-6 rounded-b-none" id="issue-{{ issue.pk }}">
     <div class="grid grid-cols-12 gap-4 mb-2">
-      <!-- Wiersz 1: tytuł -->
       <h3 class="col-span-12 text-white font-bold text-lg mb-1">{{ issue.title }}</h3>
 
-      <!-- Wiersz 2: opis (lewo) + formularz zmiany statusu (prawo) -->
       <p class="col-span-9 text-white/70 text-sm mb-2">{{ issue.description|linebreaksbr|truncatewords:15 }}</p>
       <div class="col-span-3 flex justify-end">
-        {% if user.is_authenticated and user.role == "assignee" or user.is_authenticated and user.role == "admin" %}
+        {% if user.is_authenticated and user.role == 'assignee' or user.is_authenticated and user.role == 'admin' %}
           <form 
             method="post"
             action="{% url 'change_status' pk=issue.pk %}"
             hx-post="{% url 'change_status' pk=issue.pk %}"
-            hx-target="#issue-container-{{ issue.pk }}"
+            hx-target="#status-badge-{{ issue.pk }}"
             hx-swap="outerHTML"
             class="flex gap-2"
           >
@@ -31,18 +28,16 @@
         {% endif %}
       </div>
 
-      <!-- Wiersz 3: Assigned (lewo) + aktualny status (prawo, skrajnie) -->
       <div class="col-span-9 flex items-center">
         {% if issue.assignee %}
           <span class="badge badge-ghost text-white/60">{% trans "Assigned" %}: {{ issue.assignee.username }}</span>
         {% endif %}
       </div>
       <div class="col-span-3 flex items-center justify-end">
-        <span class="badge badge-outline text-white border-white/30">{{ issue.get_status_display }}</span>
+        <span id="status-badge-{{ issue.pk }}" class="badge badge-outline text-white border-white/30">{{ issue.get_status_display }}</span>
       </div>
     </div>
 
-    <!-- Author w prawym dolnym rogu karty -->
     <div class="flex justify-end">
       {% if issue.author %}
         <span class="badge badge-ghost text-white/40">{% trans "Author" %}: {{ issue.author.username }}</span>
@@ -50,6 +45,5 @@
     </div>
   </div>
 
-  <!-- Comments Section - OUTSIDE issue card but attached -->
   {% include 'issues/_comments_section.html' %}
 </div>

@@ -39,7 +39,7 @@ def issue_detail(request, pk):
 
 def issue_list(request):
     issues = Issue.objects.select_related("author", "assignee", "project").all().order_by("-created_at")
-    return render(request, "issues/list.html", {"issues": issues})
+    return render(request, "issues/_issue_list.html", {"issues": issues})
 
 
 @login_required
@@ -52,62 +52,39 @@ def create_issue(request, project_pk):
             issue.project = project
             issue.author = request.user
 
-            print(f"DEBUG: User role: {getattr(request.user, 'role', 'NO ROLE')}")
-
-            # Assignee selection logic
             if hasattr(request.user, "role") and request.user.role == "admin":
-                print("DEBUG: Admin path")
-                # Admin can choose assignee from form, but only assignees
-                assignee = form.cleaned_data.get('assignee')
-                print(f"DEBUG: Form assignee: {assignee}")
-
-                # Check if admin selected a valid assignee
-                if assignee and assignee != "" and hasattr(assignee, 'role') and assignee.role == "assignee":
+                assignee = form.cleaned_data.get("assignee")
+                if assignee and hasattr(assignee, "role") and assignee.role == "assignee":
                     issue.assignee = assignee
-                    print(f"DEBUG: Manually assigned to: {assignee}")
                 else:
-                    # Admin did not select or selected invalid assignee - auto-assignment
-                    print("DEBUG: Admin fallback to auto-assignment")
-                    assignee_auto = CustomUser.objects.filter(role='assignee', is_active=True).annotate(
-                        num_issues=Count('assigned_issues')
-                    ).order_by('num_issues').first()
+                    assignee_auto = (
+                        CustomUser.objects.filter(role="assignee", is_active=True)
+                        .annotate(num_issues=Count("assigned_issues"))
+                        .order_by("num_issues")
+                        .first()
+                    )
                     issue.assignee = assignee_auto
-                    print(f"DEBUG: Auto-assigned to: {assignee_auto}")
             else:
-                print("DEBUG: Non-admin path")
-                # For non-admin, assign assignee with least issues (random if tie)
-                assignees = CustomUser.objects.filter(role='assignee', is_active=True).annotate(
-                    num_issues=Count('assigned_issues')
+                assignees = (
+                    CustomUser.objects.filter(role="assignee", is_active=True)
+                    .annotate(num_issues=Count("assigned_issues"))
                 )
-                print(f"DEBUG: Available assignees: {list(assignees.values('username', 'num_issues'))}")
                 if assignees.exists():
-                    # Find minimum number of issues
-                    min_count = assignees.order_by('num_issues').first().num_issues
-                    print(f"DEBUG: Min count: {min_count}")
-                    # Select all with minimum and randomly pick one
+                    min_count = assignees.order_by("num_issues").first().num_issues
                     candidates = assignees.filter(num_issues=min_count)
-                    print(f"DEBUG: Candidates: {list(candidates.values('username', 'num_issues'))}")
-                    issue.assignee = candidates.order_by('?').first()
-                    print(f"DEBUG: Selected assignee: {issue.assignee}")
-                else:
-                    print("DEBUG: No assignees available")
+                    issue.assignee = candidates.order_by("?").first()
 
-            print(f"DEBUG: Final assignee: {issue.assignee}")
             issue.save()
             if request.headers.get("HX-Request"):
                 return render(request, "issues/_issue_item.html", {"issue": issue})
             return redirect("project_detail", pk=project.pk)
         else:
-            # Form error - use existing project detail template with errors
             issues = project.issues.select_related("author", "assignee").all()
-            return render(request, "projects/detail.html", {
-                "project": project, 
-                "issue_form": form, 
-                "issues": issues
-            })
-    else:
-        form = IssueForm(user=request.user)
-    # GET request - redirect to project detail
+            return render(
+                request,
+                "projects/detail.html",
+                {"project": project, "issue_form": form, "issues": issues},
+            )
     return redirect("project_detail", pk=project.pk)
 
 
@@ -126,10 +103,8 @@ def add_comment(request, issue_pk):
             if request.headers.get("HX-Request"):
                 return render(request, "issues/_comments_section.html", {"issue": issue, "keep_open": True})
             return redirect("issue_detail", pk=issue.pk)
-        # Fallback with errors
-        ctx = {"issue": issue, "comment_form": form, "keep_open": True}
-        return render(request, "issues/detail.html", ctx)
-    return redirect("issue_detail", pk=issue.pk)
+        return render(request, "issues/detail.html", {"issue": issue, "comment_form": form, "keep_open": True})
+    return redirect("issue_detail", pk=issue_pk)
 
 
 @login_required
@@ -143,16 +118,15 @@ def change_status(request, pk):
             issue.status = new_status
             issue.save()
         if request.headers.get("HX-Request"):
-            return render(request, "issues/_issue_item.html", {"issue": issue})
+            # Zwróć tylko status badge
+            return render(request, "issues/_status_badge.html", {"issue": issue})
         return redirect("issues_list")
     else:
-        # GET request - redirect to issue detail
         return redirect("issue_detail", pk=pk)
 
 
 @login_required
 def create_project(request):
-    # Only admin can add projects
     if not (hasattr(request.user, "role") and request.user.role == "admin"):
         return HttpResponseForbidden(_("Only admin can add projects."))
     if request.method == "POST":

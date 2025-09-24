@@ -265,15 +265,30 @@ def test_change_status_allowed(page: Page, live_server, issue, role):
     page.fill("input[name='password']", "pass")
     page.click("button[type='submit']")
 
-    # Idź na stronę z listą issues (gdzie jest _issue_item.html)
-    page.goto(f"{live_server.url}/issues/")
+    # Idź na stronę projektu gdzie jest lista issues z formularzami zmiany statusu
+    page.goto(f"{live_server.url}/projects/{issue.project.pk}/")
     
-    # Dla admin/assignee formularz POWINIEN być widoczny
-    page.wait_for_selector("select[name='status']")
-    page.select_option("select[name='status']", "done")
-    page.click("button:has-text('Update')")
+    # Poczekaj na załadowanie strony z issues
     page.wait_for_load_state("networkidle")
     
+    # Dla admin/assignee formularz POWINIEN być widoczny
+    status_select = page.locator(f"form:has([hx-target='#status-badge-{issue.pk}']) select[name='status']")
+    assert status_select.is_visible(), f"Status form should be visible for {role}"
+    
+    # Zmień status na 'done'
+    status_select.select_option("done")
+    
+    # Kliknij Update button w tym samym formularzu
+    page.locator(f"form:has([hx-target='#status-badge-{issue.pk}'])").locator("button:has-text('Update')").click()
+    
+    # Poczekaj na response HTMX (badge się zmieni)
+    page.wait_for_timeout(1000)  # krótka pauza na HTMX
+    
+    # Sprawdź czy status badge się zmienił
+    status_badge = page.locator(f"#status-badge-{issue.pk}")
+    assert status_badge.is_visible(), "Status badge should be visible"
+    
+    # Sprawdź w bazie danych
     issue.refresh_from_db()
     assert issue.status == "done"
 
@@ -285,17 +300,18 @@ def test_change_status_forbidden_for_regular_user(page: Page, live_server, issue
     page.fill("input[name='password']", "password123")
     page.click("button[type='submit']")
 
-    # Idź na stronę z listą issues
-    page.goto(f"{live_server.url}/issues/")
+    # Idź na stronę projektu
+    page.goto(f"{live_server.url}/projects/{issue.project.pk}/")
+    page.wait_for_load_state("networkidle")
     
-    # Dla reporter formularz NIE POWINIEN być widoczny
-    content = page.content()
+    # Dla reporter formularz zmiany statusu NIE POWINIEN być widoczny
+    status_form = page.locator(f"form:has([hx-target='#status-badge-{issue.pk}'])")
+    assert not status_form.is_visible(), "Status change form should not be visible for reporters"
     
-    # Sprawdź czy formularz zmiany statusu jest NIEWIDOCZNY
-    assert not page.locator("select[name='status']").is_visible(), "Status form should not be visible for reporters"
-    
-    # Alternatywnie: sprawdź czy w HTML nie ma formularza
-    assert "select[name='status']" not in content, "Status select should not exist for reporters"
+    # Alternatywnie: sprawdź czy select nie istnieje
+    status_select = page.locator("select[name='status']")
+    if status_select.count() > 0:
+        assert not status_select.is_visible(), "Status select should not be visible for reporters"
     
     # Status nie powinien się zmienić (pozostaje bez zmiany)
     original_status = issue.status

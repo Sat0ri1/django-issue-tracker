@@ -1,7 +1,7 @@
-<!-- filepath: templates/issues/_issue_list.html -->
+{% load i18n %}
 <div id="issues-list" class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
   {% for issue in issues %}
-    <div id="issue-container-{{ issue.pk }}" class="flex flex-col">
+    <div class="flex flex-col">
       {% include "issues/_issue_item.html" %}
     </div>
   {% empty %}
