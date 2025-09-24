@@ -4,7 +4,7 @@ from playwright.sync_api import Page
 from django.contrib.auth import get_user_model
 from issues.models import Project, Issue, Comment
 
-# Pozwól na unsafe async operacje w Django dla testów Playwright
+# Allow unsafe async operations in Django for Playwright tests
 os.environ.setdefault('DJANGO_ALLOW_ASYNC_UNSAFE', '1')
 
 User = get_user_model()
@@ -78,10 +78,10 @@ def test_register_invalid(page: Page, live_server):
     page.fill("input[name='password2']", "456")
     page.click("button[type='submit']")
     
-    # Sprawdź, czy użytkownik NIE został utworzony (bardziej niezawodne)
+    # Check that user was NOT created (more reliable)
     assert not User.objects.filter(username="").exists()
     
-    # Alternatywnie: sprawdź, czy nadal jesteś na stronie rejestracji
+    # Alternative: check if still on registration page
     assert "register" in page.url.lower()
 
 
@@ -93,37 +93,37 @@ def test_logout_logs_user_out(page: Page, live_server, reporter_user):
     page.fill("input[name='password']", "password123")
     page.click("button[type='submit']")
     
-    # Poczekaj na załadowanie strony po loginie
+    # Wait for page to load after login
     page.wait_for_load_state("networkidle")
     
-    # Sprawdź różne możliwe teksty dla logout
+    # Check various possible texts for logout
     logout_locators = [
         page.locator("text=Logout"),
         page.locator("text=Log out"), 
         page.locator("text=Sign out"),
-        page.locator("a[href*='logout']"),  # link zawierający 'logout'
+        page.locator("a[href*='logout']"),  # link containing 'logout'
         page.locator("button:has-text('Logout')"),
         page.locator("button:has-text('Log out')")
     ]
     
-    # Znajdź pierwszy widoczny element logout
+    # Find first visible logout element
     logout_element = None
     for locator in logout_locators:
         if locator.is_visible():
             logout_element = locator
             break
     
-    # Jeśli nie znaleziono logout, wypisz zawartość strony dla debugowania
+    # If logout not found, print page content for debugging
     if not logout_element:
-        print("DEBUG: Zawartość strony po loginie:")
-        print(page.content()[:500])  # Pierwsze 500 znaków
-        assert False, "Nie znaleziono elementu logout na stronie"
+        print("DEBUG: Page content after login:")
+        print(page.content()[:500])  # First 500 characters
+        assert False, "Could not find logout element on page"
     
-    # Kliknij logout
+    # Click logout
     logout_element.click()
     page.wait_for_load_state("networkidle")
     
-    # Sprawdź, czy pojawiło się "Login"
+    # Check if "Login" appeared
     login_locators = [
         page.locator("text=Login"),
         page.locator("text=Log in"),
@@ -132,7 +132,7 @@ def test_logout_logs_user_out(page: Page, live_server, reporter_user):
     ]
     
     login_visible = any(loc.is_visible() for loc in login_locators)
-    assert login_visible, "Nie znaleziono elementu login po wylogowaniu"
+    assert login_visible, "Could not find login element after logout"
 
 
 # -------------------------------
@@ -206,9 +206,9 @@ def test_create_issue_invalid_form(page: Page, live_server, project, reporter_us
     page.fill("textarea[name='description']", "desc")
     page.click("button[type='submit']")
 
-    # Sprawdź, czy issue NIE został utworzony (bardziej niezawodne)
+    # Check that issue was NOT created (more reliable)
     assert not issue_exists("")
-    # I sprawdź, czy nadal jesteś na stronie tworzenia
+    # And check if still on creation page
     assert "create" in page.url
 
 
@@ -246,7 +246,7 @@ def test_change_status_forbidden_for_regular_user(page: Page, live_server, issue
 
     page.goto(f"{live_server.url}/issues/{issue.pk}/change-status/")
     
-    # Sprawdź, czy formularz w ogóle istnieje (może być 403)
+    # Check if form exists at all (might be 403)
     content = page.content()
     if "select[name='status']" in content:
         page.select_option("select[name='status']", "done")
@@ -279,13 +279,13 @@ def test_add_comment_allowed(page: Page, live_server, issue, role):
     page.click("button[type='submit']")
 
     assert comment_exists(issue, f"Comment by {role}", user)
-    # Usuń problematyczny wait_for_selector lub dodaj try/except
+    # Try to find comment in page content, but don't fail if selector doesn't exist
     try:
         page.wait_for_selector(f"#comments-section-{issue.pk}", timeout=3000)
         content = page.content()
         assert f"Comment by {role}" in content
-    except:
-        # Jeśli selector nie istnieje, sprawdź tylko czy komentarz został dodany
+    except Exception:
+        # If selector doesn't exist, just check that comment was added to DB
         pass
 
 
@@ -313,5 +313,5 @@ def test_add_comment_invalid_form(page: Page, live_server, issue, admin_user):
     page.fill("textarea[name='text']", "")
     page.click("button[type='submit']")
     
-    # Sprawdź, czy pusty komentarz NIE został dodany (bardziej niezawodne)
+    # Check that empty comment was NOT added (more reliable)
     assert not comment_exists(issue, "", admin_user)
