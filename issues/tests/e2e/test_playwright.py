@@ -6,6 +6,9 @@ from issues.models import Project, Issue, Comment
 User = get_user_model()
 
 
+# -------------------------------
+# USER FIXTURES
+# -------------------------------
 @pytest.fixture
 def admin_user(db):
     return User.objects.create_user(username="admin", password="password123", role="admin")
@@ -21,6 +24,9 @@ def reporter_user(db):
     return User.objects.create_user(username="reporter", password="password123", role="reporter")
 
 
+# -------------------------------
+# PROJECT / ISSUE FIXTURES
+# -------------------------------
 @pytest.fixture
 def project(db):
     return Project.objects.create(name="Test Project")
@@ -66,8 +72,10 @@ def test_logout_logs_user_out(page: Page, live_server, reporter_user):
     page.fill("input[name='username']", reporter_user.username)
     page.fill("input[name='password']", "password123")
     page.click("button[type='submit']")
+
     # Verify logged in
     assert page.locator("text=Logout").is_visible()
+
     # Logout
     page.click("text=Logout")
     assert page.locator("text=Login").is_visible()
@@ -78,12 +86,10 @@ def test_logout_logs_user_out(page: Page, live_server, reporter_user):
 # -------------------------------
 def test_create_project_requires_login(page: Page, live_server):
     page.goto(f"{live_server.url}/projects/create/")
-    # Should redirect to login
     assert "login" in page.url
 
 
 def test_create_project_allowed_for_admin(page: Page, live_server, admin_user):
-    # Login as admin
     page.goto(f"{live_server.url}/login/")
     page.fill("input[name='username']", admin_user.username)
     page.fill("input[name='password']", "password123")
@@ -104,7 +110,6 @@ def test_create_project_forbidden_for_non_admin(page: Page, live_server, reporte
 
     page.goto(f"{live_server.url}/projects/create/")
     content = page.content()
-    # Either forbidden page or redirect
     assert "forbidden" in content.lower() or "403" in content or "login" not in page.url
 
 
@@ -119,7 +124,7 @@ def test_create_issue_requires_login(page: Page, live_server, project):
 @pytest.mark.parametrize("role", ["admin", "assignee", "reporter"])
 def test_create_issue_logged_in(page: Page, live_server, project, db, role):
     user = User.objects.create_user(username=f"user_{role}", password="pass", role=role)
-    # login
+
     page.goto(f"{live_server.url}/login/")
     page.fill("input[name='username']", user.username)
     page.fill("input[name='password']", "pass")
@@ -134,7 +139,6 @@ def test_create_issue_logged_in(page: Page, live_server, project, db, role):
 
 
 def test_create_issue_invalid_form(page: Page, live_server, project, reporter_user):
-    # login
     page.goto(f"{live_server.url}/login/")
     page.fill("input[name='username']", reporter_user.username)
     page.fill("input[name='password']", "password123")
@@ -160,6 +164,7 @@ def test_change_status_requires_login(page: Page, live_server, issue):
 @pytest.mark.parametrize("role", ["admin", "assignee"])
 def test_change_status_allowed(page: Page, live_server, issue, role):
     user = User.objects.create_user(username=f"user_{role}", password="pass", role=role)
+
     page.goto(f"{live_server.url}/login/")
     page.fill("input[name='username']", user.username)
     page.fill("input[name='password']", "pass")
@@ -184,7 +189,6 @@ def test_change_status_forbidden_for_regular_user(page: Page, live_server, issue
     page.click("button[type='submit']")
 
     issue.refresh_from_db()
-    # Status should not change
     assert issue.status != "done"
 
 
@@ -199,6 +203,7 @@ def test_add_comment_requires_login(page: Page, live_server, issue):
 @pytest.mark.parametrize("role", ["admin", "assignee"])
 def test_add_comment_allowed(page: Page, live_server, issue, role):
     user = User.objects.create_user(username=f"user_{role}", password="pass", role=role)
+
     page.goto(f"{live_server.url}/login/")
     page.fill("input[name='username']", user.username)
     page.fill("input[name='password']", "pass")
@@ -209,7 +214,6 @@ def test_add_comment_allowed(page: Page, live_server, issue, role):
     page.click("button[type='submit']")
 
     assert Comment.objects.filter(issue=issue, text=f"Comment by {role}", author=user).exists()
-    # check HTMX fragment updates
     page.wait_for_selector(f"#comments-section-{issue.pk}")
     assert f"Comment by {role}" in page.content()
 
@@ -239,6 +243,3 @@ def test_add_comment_invalid_form(page: Page, live_server, issue, admin_user):
 
     content = page.content()
     assert "This field is required" in content
-
-
-
