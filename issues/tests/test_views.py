@@ -7,10 +7,12 @@ UserModel = get_user_model()
 
 
 def user_model_has_role_field() -> bool:
+    # Check if the User model has a 'role' field
     return any(getattr(f, "name", "") == "role" for f in UserModel._meta.get_fields())
 
 
 def create_user(username: str, password: str, role: str | None = None):
+    # Create a user with an optional role
     if role and user_model_has_role_field():
         return UserModel.objects.create_user(username=username, password=password, role=role)
     return UserModel.objects.create_user(username=username, password=password)
@@ -30,7 +32,8 @@ def test_project_list_view(client):
 def test_create_project_requires_login(client):
     url = reverse("create_project")  # assuming this URL exists
     response = client.post(url, {"name": "Test Project"})
-    assert response.status_code == 302  # redirect to login
+    # Should redirect to login if not authenticated
+    assert response.status_code == 302
 
 
 @pytest.mark.django_db
@@ -44,21 +47,21 @@ def test_create_project_allowed_for_admin_only(client):
     
     url = reverse("create_project")  # assuming this URL exists
     
-    # Admin should be able to create project
+    # Admin should be able to create a project
     client.login(username=admin.username, password="pass")
     r1 = client.post(url, {"name": "Admin Project"})
     assert r1.status_code in (200, 302)
     assert Project.objects.filter(name="Admin Project").exists()
     client.logout()
     
-    # Assignee should NOT be able to create project
+    # Assignee should NOT be able to create a project
     client.login(username=assignee.username, password="pass")
     r2 = client.post(url, {"name": "Assignee Project"})
     assert not Project.objects.filter(name="Assignee Project").exists()
     assert r2.status_code in (403, 200, 302)
     client.logout()
     
-    # Regular user should NOT be able to create project
+    # Regular user should NOT be able to create a project
     client.login(username=regular.username, password="pass")
     r3 = client.post(url, {"name": "Regular Project"})
     assert not Project.objects.filter(name="Regular Project").exists()
@@ -72,6 +75,7 @@ def test_create_issue_requires_login(client):
     project = Project.objects.create(name="P2")
     url = reverse("create_issue", kwargs={"project_pk": project.pk})
     response = client.post(url, {"title": "Test", "description": "Test"})
+    # Should redirect to login if not authenticated
     assert response.status_code == 302
 
 
@@ -108,6 +112,7 @@ def test_create_issue_logged_in(client):
     response = client.post(url, {"title": "BugY", "description": "desc"})
     assert response.status_code == 302
     issue = Issue.objects.get(title="BugY")
+    # Check that the issue is linked to the correct project
     assert issue.project == project
 
 
@@ -134,6 +139,7 @@ def test_change_status_requires_login(client):
     issue = Issue.objects.create(project=project, title="Bug", description="desc")
     url = reverse("change_status", kwargs={"pk": issue.pk})
     response = client.post(url, {"status": "done"})
+    # Should redirect to login if not authenticated
     assert response.status_code == 302
 
 
@@ -152,6 +158,7 @@ def test_change_status_allowed_for_privileged_roles(client, role):
     response = client.post(url, {"status": "done"})
     assert response.status_code == 302
     issue.refresh_from_db()
+    # Status should be changed to 'done'
     assert issue.status == "done"
 
 
@@ -188,7 +195,7 @@ def test_change_status_logged_in(client):
         issue.refresh_from_db()
         assert issue.status == "done"
     else:
-        # without roles it may vary - depends on implementation
+        # Without roles it may vary - depends on implementation
         assert response.status_code in (200, 302, 403)
 
 
@@ -206,7 +213,7 @@ def test_manual_assignee_assignment_only_for_admin(client):
     
     project = Project.objects.create(name="P-Assign")
     
-    # Admin should be able to manually assign
+    # Admin should be able to manually assign an assignee
     client.login(username=admin.username, password="pass")
     url = reverse("create_issue", kwargs={"project_pk": project.pk})
     response = client.post(url, {
@@ -266,7 +273,8 @@ def test_add_comment_requires_login(client):
     issue = Issue.objects.create(project=project, title="Bug", description="desc")
     url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
     response = client.post(url, {"text": "Comment"})
-    assert response.status_code == 302  # redirect to login
+    # Should redirect to login if not authenticated
+    assert response.status_code == 302
 
 
 @pytest.mark.django_db
@@ -284,6 +292,7 @@ def test_add_comment_allowed_for_privileged_roles(client, role):
     r = client.post(url, {"text": f"ok-{role}"})
     # View can return 302 (redirect) or 200 (render with errors/page)
     assert r.status_code in (200, 302)
+    # Check that the comment was created
     assert Comment.objects.filter(issue=issue, text=f"ok-{role}", author=user).exists()
 
 
@@ -291,7 +300,7 @@ def test_add_comment_allowed_for_privileged_roles(client, role):
 def test_add_comment_forbidden_for_regular_user(client):
     if not user_model_has_role_field():
         pytest.skip("User model has no 'role' field - role test skipped.")
-    # regular user without permissions (e.g. reporter/user)
+    # Regular user without permissions (e.g. reporter/user)
     user = create_user(username="regular1", password="pass", role="reporter")
     client.login(username=user.username, password="pass")
 
@@ -300,9 +309,9 @@ def test_add_comment_forbidden_for_regular_user(client):
     url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
 
     r = client.post(url, {"text": "blocked"})
-    # most important: comment is NOT created
+    # Most important: comment is NOT created
     assert not Comment.objects.filter(issue=issue, text="blocked").exists()
-    # preferred 403; allow 200/302 if implementation handles differently
+    # Preferred 403; allow 200/302 if implementation handles differently
     assert r.status_code in (403, 200, 302)
 
 
@@ -320,14 +329,14 @@ def test_add_comment_logged_in_valid_for_privileged_otherwise_forbidden(client):
     project = Project.objects.create(name="P-MIX")
     issue = Issue.objects.create(project=project, title="Bug", description="desc")
 
-    # regular - should be blocked
+    # Regular - should be blocked
     client.login(username=regular.username, password="pass")
     r1 = client.post(reverse("add_comment", kwargs={"issue_pk": issue.pk}), {"text": "nope"})
     assert not Comment.objects.filter(issue=issue, text="nope").exists()
     assert r1.status_code in (403, 200, 302)
     client.logout()
 
-    # admin - should succeed
+    # Admin - should succeed
     client.login(username=admin.username, password="pass")
     r2 = client.post(reverse("add_comment", kwargs={"issue_pk": issue.pk}), {"text": "ok"})
     assert r2.status_code in (200, 302)
@@ -336,7 +345,7 @@ def test_add_comment_logged_in_valid_for_privileged_otherwise_forbidden(client):
 
 @pytest.mark.django_db
 def test_add_comment_invalid_form(client):
-    # use privileged role if roles exist; otherwise skip as role validation would block test
+    # Use privileged role if roles exist; otherwise skip as role validation would block test
     if not user_model_has_role_field():
         pytest.skip("User model has no 'role' field - comment form test skipped.")
     user = create_user(username="commenter2", password="pass", role="admin")
@@ -348,6 +357,7 @@ def test_add_comment_invalid_form(client):
 
     response = client.post(url, {"text": ""})  # missing required text
     assert response.status_code == 200
+    # Check for required field error message
     assert b"This field is required" in response.content
 
 
@@ -374,6 +384,7 @@ def test_register_view_valid(client):
         "password2": "StrongPass123",
     })
     assert response.status_code == 302
+    # Check that the user was created
     assert UserModel.objects.filter(username="testuser").exists()
 
 
@@ -386,4 +397,5 @@ def test_register_view_invalid(client):
         "password2": "456",
     })
     assert response.status_code == 200
+    # Check for required field or invalid email error
     assert b"This field is required" in response.content or b"Enter a valid email" in response.content

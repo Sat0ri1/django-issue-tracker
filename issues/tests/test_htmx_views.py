@@ -52,7 +52,7 @@ class TestHTMXViews:
     def test_create_issue_requires_login(self, client, project):
         url = reverse("create_issue", kwargs={"project_pk": project.pk})
         r = client.post(url, {"title": "HTMX Bug", "description": "desc"}, HTTP_HX_REQUEST="true")
-        # niezalogowany → przekierowanie na login
+        # not logged in → redirect to login
         assert r.status_code == 302
         assert "/login/" in r.url
 
@@ -62,7 +62,7 @@ class TestHTMXViews:
         data = {"title": "HTMX Bug", "description": "desc"}
         r = client.post(url, data, HTTP_HX_REQUEST="true")
         assert r.status_code == 200
-        # Issue faktycznie dodane
+        # Issue actually created
         assert project.issues.filter(title="HTMX Bug").exists()
         assert b"HTMX Bug" in r.content
 
@@ -204,10 +204,10 @@ class TestHTMXViews:
         issue.refresh_from_db()
         assert issue.status == "in_progress"
         
-        # ZMIANA: Teraz zwraca tylko status badge, nie cały issue item
+        # CHANGE: Now returns only status badge, not full issue item
         content = r.content.decode("utf-8")
         assert f'id="status-badge-{issue.pk}"' in content
-        # POPRAWKA: "In Progress" z wielką literą P
+        # FIX: "In Progress" with capital P
         assert "In Progress" in content or "in_progress" in content
 
     @pytest.mark.parametrize("role", ["admin", "assignee"])
@@ -225,11 +225,11 @@ class TestHTMXViews:
         issue.refresh_from_db()
         assert issue.status == "done"
         
-        # ZMIANA: Sprawdza tylko status badge, nie cały content
+        # CHANGE: Checks only status badge, not full content
         content = r.content.decode("utf-8")
         assert f'id="status-badge-{issue.pk}"' in content
         assert "Done" in content or "done" in content
-        # Sprawdza czy to jest span element z odpowiednimi klasami
+        # Checks if this is a span element with correct classes
         assert 'class="badge badge-outline' in content
 
     def test_change_status_forbidden_for_regular_user_htmx(self, client, issue):
@@ -265,10 +265,9 @@ class TestHTMXViews:
         assert 'class="badge badge-outline' in content
         
         # Should NOT contain other issue elements
-        assert issue.title not in content  # title nie ma być w response
-        assert issue.description not in content  # description nie ma być
-        assert 'class="card bg-gray-700' not in content  # nie ma być całe issue
+        assert issue.title not in content  # title should NOT be in response
+        assert issue.description not in content  # description should NOT be in response
+        assert 'class="card bg-gray-700' not in content  # should NOT be full issue
         
         # Response should be minimal - just the badge
-
-        assert content.count('<span') == 1  # tylko jeden span element        assert content.count('<span') == 1  # tylko jeden span element
+        assert content.count('<span') == 1  # only one span element

@@ -156,9 +156,9 @@ def test_create_project_allowed_for_admin(page: Page, live_server, admin_user):
     page.fill("input[name='name']", "Admin Project")
     page.fill("textarea[name='description']", "Admin project description")
     
-    # Użyj bardziej specyficznego selektora - przycisk z tekstem "Create Project"
+    # Use a more specific selector - button with text "Create Project"
     page.click("button:has-text('Create Project')")
-    # LUB alternatywnie:
+    # OR alternatively:
     # page.click("form:has(input[name='name']) button[type='submit']")
     
     page.wait_for_load_state("networkidle")
@@ -176,12 +176,12 @@ def test_create_project_forbidden_for_non_admin(page: Page, live_server, reporte
     page.goto(f"{live_server.url}/projects/create/")
     content = page.content()
     
-    # Sprawdź różne możliwe komunikaty błędów
+    # Check various possible forbidden messages
     forbidden_messages = [
         "forbidden" in content.lower(),
         "403" in content,
         "login" in page.url,
-        "only admin" in content.lower(),  # <-- DODANE!
+        "only admin" in content.lower(),  # <-- ADDED!
         "access denied" in content.lower(),
         "permission denied" in content.lower()
     ]
@@ -207,14 +207,14 @@ def test_create_issue_logged_in(page: Page, live_server, project, db, role):
     page.fill("input[name='password']", "pass")
     page.click("button[type='submit']")
 
-    # ZMIANA: Idź na stronę projektu zamiast /issues/create/
+    # CHANGE: Go to project page instead of /issues/create/
     page.goto(f"{live_server.url}/projects/{project.pk}/")
     
-    # Znajdź formularz tworzenia issue na stronie projektu
+    # Find issue creation form on the project page
     page.fill("input[name='title']", f"Issue by {role}")
     page.fill("textarea[name='description']", "Issue description")
     
-    # Znajdź przycisk submit dla formularza issue (nie projektu!)
+    # Find submit button for issue form (not project!)
     page.locator("form:has(input[name='title'])").locator("button[type='submit']").click()
     page.wait_for_load_state("networkidle")
     
@@ -228,22 +228,22 @@ def test_create_issue_invalid_form(page: Page, live_server, project, reporter_us
     page.fill("input[name='password']", "password123")
     page.click("button[type='submit']")
 
-    # ZMIANA: Idź na stronę projektu (tak jak w poprawionym teście)
+    # CHANGE: Go to project page (as in the updated test)
     page.goto(f"{live_server.url}/projects/{project.pk}/")
     
     # Fill invalid data (empty title)
     page.fill("input[name='title']", "")
     page.fill("textarea[name='description']", "desc")
     
-    # Znajdź przycisk submit dla formularza issue
+    # Find submit button for issue form
     page.locator("form:has(input[name='title'])").locator("button[type='submit']").click()
     page.wait_for_load_state("networkidle")
 
     # Check that issue was NOT created (more reliable)
     assert not issue_exists("")
     
-    # ZMIANA: Sprawdź czy jesteś na stronie projektu lub głównej (po błędzie formularza)
-    # Zamiast sprawdzać "create" w URL
+    # CHANGE: Check if you are on the project or main page (after form error)
+    # Instead of checking "create" in URL
     assert page.url.endswith("/") or f"projects/{project.pk}" in page.url
 
 
@@ -265,17 +265,17 @@ def test_change_status_allowed(page: Page, live_server, issue, role):
     page.fill("input[name='password']", "pass")
     page.click("button[type='submit']")
 
-    # Idź na stronę projektu gdzie jest lista issues z formularzami zmiany statusu
+    # Go to project page where issues with status change forms are listed
     page.goto(f"{live_server.url}/projects/{issue.project.pk}/")
     
-    # Poczekaj na załadowanie strony z issues
+    # Wait for issues to load
     page.wait_for_load_state("networkidle")
     
-    # DEBUG: Sprawdź co jest na stronie
+    # DEBUG: Check what is on the page
     print(f"DEBUG: Issue ID: {issue.pk}")
     print(f"DEBUG: User role: {role}")
     
-    # Sprawdź różne selektory
+    # Check various selectors
     all_forms = page.locator("form").count()
     status_selects = page.locator("select[name='status']").count()
     update_buttons = page.locator("button:has-text('Update')").count()
@@ -284,28 +284,28 @@ def test_change_status_allowed(page: Page, live_server, issue, role):
     print(f"DEBUG: Status selects: {status_selects}")
     print(f"DEBUG: Update buttons: {update_buttons}")
     
-    # Sprawdź HTML dla debugowania
+    # Check HTML for debugging
     if status_selects == 0:
         print("DEBUG: Page content (first 1000 chars):")
         print(page.content()[:1000])
     
-    # Prostszy selektor - tylko select[name='status']
+    # Simpler selector - just select[name='status']
     status_select = page.locator("select[name='status']")
     assert status_select.count() > 0, f"No status select found for {role}"
     assert status_select.is_visible(), f"Status select should be visible for {role}"
     
-    # Zmień status na 'done'
+    # Change status to 'done'
     status_select.select_option("done")
     
-    # Kliknij pierwszy dostępny Update button
+    # Click the first available Update button
     update_button = page.locator("button:has-text('Update')")
     assert update_button.count() > 0, "No Update button found"
     update_button.first.click()
     
-    # Poczekaj na response HTMX
+    # Wait for HTMX response
     page.wait_for_timeout(1000)
     
-    # Sprawdź w bazie danych
+    # Check in the database
     issue.refresh_from_db()
     assert issue.status == "done"
 
@@ -317,20 +317,20 @@ def test_change_status_forbidden_for_regular_user(page: Page, live_server, issue
     page.fill("input[name='password']", "password123")
     page.click("button[type='submit']")
 
-    # Idź na stronę projektu
+    # Go to project page
     page.goto(f"{live_server.url}/projects/{issue.project.pk}/")
     page.wait_for_load_state("networkidle")
     
-    # Dla reporter formularz zmiany statusu NIE POWINIEN być widoczny
+    # For reporter, status change form should NOT be visible
     status_form = page.locator(f"form:has([hx-target='#status-badge-{issue.pk}'])")
     assert not status_form.is_visible(), "Status change form should not be visible for reporters"
     
-    # Alternatywnie: sprawdź czy select nie istnieje
+    # Alternatively: check if select does not exist
     status_select = page.locator("select[name='status']")
     if status_select.count() > 0:
         assert not status_select.is_visible(), "Status select should not be visible for reporters"
     
-    # Status nie powinien się zmienić (pozostaje bez zmiany)
+    # Status should not change (remains unchanged)
     original_status = issue.status
     issue.refresh_from_db()
     assert issue.status == original_status
@@ -354,29 +354,29 @@ def test_add_comment_allowed(page: Page, live_server, issue, role):
     page.fill("input[name='password']", "pass")
     page.click("button[type='submit']")
 
-    # ZMIANA: Idź na stronę projektu gdzie są issues z komentarzami
+    # CHANGE: Go to project page where issues with comments are listed
     page.goto(f"{live_server.url}/projects/{issue.project.pk}/")
     page.wait_for_load_state("networkidle")
     
-    # ZMIANA: Otwórz sekcję komentarzy (kliknij na details summary)
+    # CHANGE: Open comments section (click on details summary)
     comments_summary = page.locator("summary:has-text('Comments')")
     if comments_summary.is_visible():
         comments_summary.click()
-        page.wait_for_timeout(500)  # Poczekaj na otwarcie details
+        page.wait_for_timeout(500)  # Wait for details to open
     
-    # Teraz wypełnij formularz komentarza
+    # Now fill the comment form
     textarea = page.locator("textarea[name='text']")
     
-    # Debug jeśli textarea nie jest widoczna
+    # Debug if textarea is not visible
     if not textarea.is_visible():
         print("DEBUG: Textarea not visible, page content:")
         print(page.content()[:1000])
         
-        # Spróbuj znaleźć inne selektory
+        # Try to find other selectors
         all_textareas = page.locator("textarea").count()
         print(f"DEBUG: All textareas on page: {all_textareas}")
         
-        # Sprawdź czy sekcja komentarzy istnieje
+        # Check if comments section exists
         comments_sections = page.locator("[id*='comments']").count()
         print(f"DEBUG: Comments sections: {comments_sections}")
     
@@ -384,14 +384,14 @@ def test_add_comment_allowed(page: Page, live_server, issue, role):
     
     textarea.fill(f"Comment by {role}")
     
-    # Znajdź przycisk Add Comment
+    # Find Add Comment button
     add_button = page.locator("button:has-text('Add Comment')")
     assert add_button.is_visible(), "Add Comment button should be visible"
     add_button.click()
     
-    page.wait_for_timeout(1000)  # Poczekaj na HTMX response
+    page.wait_for_timeout(1000)  # Wait for HTMX response
     
-    # Sprawdź w bazie danych
+    # Check in the database
     assert comment_exists(issue, f"Comment by {role}", user)
 
 
@@ -402,21 +402,21 @@ def test_add_comment_forbidden_for_regular_user(page: Page, live_server, issue, 
     page.fill("input[name='password']", "password123")
     page.click("button[type='submit']")
 
-    # ZMIANA: Idź na stronę projektu
+    # CHANGE: Go to project page
     page.goto(f"{live_server.url}/projects/{issue.project.pk}/")
     page.wait_for_load_state("networkidle")
     
-    # ZMIANA: Spróbuj otworzyć komentarze
+    # CHANGE: Try to open comments
     comments_summary = page.locator("summary:has-text('Comments')")
     if comments_summary.is_visible():
         comments_summary.click()
         page.wait_for_timeout(500)
     
-    # Dla reporter formularz dodawania komentarza NIE POWINIEN być widoczny
+    # For reporter, comment form should NOT be visible
     textarea = page.locator("textarea[name='text']")
     assert not textarea.is_visible(), "Comment form should not be visible for reporters"
     
-    # Status nie powinien się zmienić
+    # Status should not change
     assert not comment_exists(issue, "Blocked comment", reporter_user)
 
 
@@ -427,17 +427,17 @@ def test_add_comment_invalid_form(page: Page, live_server, issue, admin_user):
     page.fill("input[name='password']", "password123")
     page.click("button[type='submit']")
 
-    # ZMIANA: Idź na stronę projektu
+    # CHANGE: Go to project page
     page.goto(f"{live_server.url}/projects/{issue.project.pk}/")
     page.wait_for_load_state("networkidle")
     
-    # Otwórz komentarze
+    # Open comments
     comments_summary = page.locator("summary:has-text('Comments')")
     if comments_summary.is_visible():
         comments_summary.click()
         page.wait_for_timeout(500)
     
-    # Wypełnij pustym tekstem
+    # Fill with empty text
     textarea = page.locator("textarea[name='text']")
     textarea.fill("")
     
@@ -446,5 +446,5 @@ def test_add_comment_invalid_form(page: Page, live_server, issue, admin_user):
     
     page.wait_for_timeout(1000)
     
-    # Pusty komentarz nie powinien zostać dodany
+    # Empty comment should not be added
     assert not comment_exists(issue, "", admin_user)
