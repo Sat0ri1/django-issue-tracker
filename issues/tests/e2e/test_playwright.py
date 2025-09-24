@@ -152,8 +152,21 @@ def test_create_project_allowed_for_admin(page: Page, live_server, admin_user):
     page.click("button[type='submit']")
 
     page.goto(f"{live_server.url}/projects/create/")
+    
+    # Debug: sprawdź czy jesteś na właściwej stronie
+    print(f"DEBUG: Current URL after navigation: {page.url}")
+    
     page.fill("input[name='name']", "Admin Project")
     page.click("button[type='submit']")
+    
+    # Debug: sprawdź URL po submit
+    print(f"DEBUG: URL after submit: {page.url}")
+    
+    # Debug: sprawdź zawartość strony po submit
+    if not project_exists("Admin Project"):
+        print("DEBUG: Page content after project creation attempt:")
+        print(page.content()[:1000])  # First 1000 characters
+    
     assert project_exists("Admin Project")
 
 
