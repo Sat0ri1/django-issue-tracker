@@ -153,14 +153,36 @@ def test_create_project_allowed_for_admin(page: Page, live_server, admin_user):
 
     page.goto(f"{live_server.url}/projects/create/")
     
-    # Fill BOTH required fields
+    # DEBUG: Wyświetl cały formularz
+    print("DEBUG: Full form HTML:")
+    form_html = page.locator("form").inner_html()
+    print(form_html)
+    
+    # Wypełnij wszystkie pola
     page.fill("input[name='name']", "Admin Project")
-    page.fill("textarea[name='description']", "Admin project description")  # <-- DODANE!
+    page.fill("textarea[name='description']", "Admin project description")
+    
+    # Sprawdź liczbę projektów przed submit
+    projects_before = Project.objects.count()
+    print(f"DEBUG: Projects before submit: {projects_before}")
     
     page.click("button[type='submit']")
     page.wait_for_load_state("networkidle")
     
-    assert project_exists("Admin Project")
+    # Sprawdź liczbę projektów po submit
+    projects_after = Project.objects.count()
+    print(f"DEBUG: Projects after submit: {projects_after}")
+    
+    # Sprawdź wszystkie projekty w bazie
+    all_projects = list(Project.objects.values('name', 'description'))
+    print(f"DEBUG: All projects in DB: {all_projects}")
+    
+    # Sprawdź zawartość strony po submit
+    content = page.content()
+    print(f"DEBUG: Current URL: {page.url}")
+    print(f"DEBUG: Page content (first 800 chars): {content[:800]}")
+    
+    assert project_exists("Admin Project"), "Project was not created"
 
 
 @pytest.mark.django_db(transaction=True)
