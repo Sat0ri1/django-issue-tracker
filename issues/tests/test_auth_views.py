@@ -37,7 +37,7 @@ class TestAuthViews:
         assert not User.objects.filter(username='newuser').exists()
 
     def test_login_view(self):
-        user = User.objects.create_user(
+        User.objects.create_user(
             username='testuser',
             email='test@example.com',
             password='testpass123'
@@ -58,13 +58,13 @@ class TestAuthViews:
         assert response.status_code == 302  # Redirect to login
 
     def test_role_based_permissions(self):
-        admin_user = User.objects.create_user(
+        User.objects.create_user(
             username='admin',
             email='admin@example.com',
             password='adminpass123',
             role='admin'
         )
-        user = User.objects.create_user(
+        User.objects.create_user(
             username='user',
             email='user@example.com',
             password='userpass123',
