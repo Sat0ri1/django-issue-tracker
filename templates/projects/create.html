@@ -1,4 +1,3 @@
-<!-- filepath: d:\projekty\django-issue-tracker\templates\projects\create.html -->
 {% extends "base.html" %}
 {% load widget_tweaks %}
 {% load i18n %}
@@ -21,10 +20,10 @@
       <label class="label">
         <span class="label-text text-white font-medium">{{ form.name.label }}</span>
       </label>
-      {% render_field form.name class="input input-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-400 focus:ring-2 focus:ring-gray-400" placeholder=project_name_placeholder %}
+      {% render_field form.name class="input input-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-400 focus:ring-2 focus:ring-gray-400" placeholder=project_name_placeholder data-testid="project-name" %}
       {% if form.name.errors %}
         <label class="label">
-          <span class="label-text-alt text-red-400">{{ form.name.errors.0 }}</span>
+          <span class="label-text-alt text-red-400" data-testid="project-name-error">{{ form.name.errors.0 }}</span>
         </label>
       {% endif %}
     </div>
@@ -36,17 +35,19 @@
       <label class="label">
         <span class="label-text text-white font-medium">{{ form.description.label }}</span>
       </label>
-      {% render_field form.description class="textarea textarea-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-400 focus:ring-2 focus:ring-gray-400" placeholder=project_desc_placeholder rows="4" %}
+      {% render_field form.description class="textarea textarea-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-400 focus:ring-2 focus:ring-gray-400" placeholder=project_desc_placeholder rows="4" data-testid="project-description" %}
       {% if form.description.errors %}
         <label class="label">
-          <span class="label-text-alt text-red-400">{{ form.description.errors.0 }}</span>
+          <span class="label-text-alt text-red-400" data-testid="project-description-error">{{ form.description.errors.0 }}</span>
         </label>
       {% endif %}
     </div>
     {% endwith %}
 
     <!-- Submit button -->
-    <button type="submit" class="btn bg-gray-200 text-gray-700 border-none rounded-lg shadow-md hover:bg-gray-300 hover:shadow-lg transition-all duration-300 ease-out transform hover:-translate-y-0.5 w-full px-6 mt-6">
+    <button type="submit" 
+            data-testid="project-submit"
+            class="btn bg-gray-200 text-gray-700 border-none rounded-lg shadow-md hover:bg-gray-300 hover:shadow-lg transition-all duration-300 ease-out transform hover:-translate-y-0.5 w-full px-6 mt-6">
       <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
       </svg>
