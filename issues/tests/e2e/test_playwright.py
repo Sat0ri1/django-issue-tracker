@@ -233,8 +233,9 @@ def test_admin_can_add_comment(page: Page, live_server, test_project, test_issue
     
     page.goto(f"{live_server.url}/projects/{test_project.pk}/")
     
-    # Toggle komentarzy
-    page.get_by_test_id(f"toggle-comments-{test_issue.pk}").click()
+    # Kliknij na label zamiast checkbox (checkbox jest ukryty)
+    comment_toggle_label = page.locator(f"label[for='toggle-comments-{test_issue.pk}']")
+    comment_toggle_label.click()
     page.wait_for_timeout(1000)
     
     # Dodaj komentarz
@@ -258,8 +259,8 @@ def test_comment_count_updates_with_htmx(page: Page, live_server, test_project, 
     comment_count = page.get_by_test_id(f"comment-count-{test_issue.pk}")
     expect(comment_count).to_contain_text("0")
     
-    # Dodaj komentarz
-    page.get_by_test_id(f"toggle-comments-{test_issue.pk}").click()
+    # Dodaj komentarz - kliknij label
+    page.locator(f"label[for='toggle-comments-{test_issue.pk}']").click()
     page.get_by_test_id("comment-content").fill("Test comment")
     page.get_by_test_id("comment-submit").click()
     
@@ -275,7 +276,7 @@ def test_reporter_cannot_add_comments(page: Page, live_server, test_project, tes
     
     page.goto(f"{live_server.url}/projects/{test_project.pk}/")
     
-    page.get_by_test_id(f"toggle-comments-{test_issue.pk}").click()
+    page.locator(f"label[for='toggle-comments-{test_issue.pk}']").click()
     expect(page.get_by_test_id("comment-form")).not_to_be_visible()
 
 @pytest.mark.django_db(transaction=True)
@@ -287,10 +288,8 @@ def test_issue_list_updates_after_creation(page: Page, live_server, test_project
     
     page.goto(f"{live_server.url}/projects/{test_project.pk}/")
     
-    # Sprawdź początkową liczbę issues - teraz używamy issue-item nie issue-container
     initial_count = page.get_by_test_id("issue-item").count()
-    
-    # Utwórz nowe issue
+
     page.get_by_test_id("issue-title").fill("HTMX Test Issue")
     page.get_by_test_id("issue-description").fill("Testing HTMX updates")
     page.get_by_test_id("issue-submit").click()
