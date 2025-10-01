@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseForbidden
 from django.contrib.auth import get_user_model
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from django.utils.translation import gettext as _
 from .models import Project, Issue, Comment 
 from .forms import IssueForm, CommentForm, ProjectForm, CustomUserCreationForm
@@ -19,11 +19,13 @@ def project_list(request):
 def project_detail(request, pk):
     # Show details for a single project, including its issues and issue creation form
     project = get_object_or_404(Project, pk=pk)
-    issues = project.issues.select_related("author", "assignee").all()
-    
-    # Add comments for each issue
-    for issue in issues:
-        issue.comments_list = Comment.objects.filter(issue=issue).select_related('author').all()
+    issues = project.issues.select_related("author", "assignee").prefetch_related(
+        Prefetch(
+            "comments",
+            queryset=Comment.objects.select_related("author"),
+            to_attr="comments_list"
+        )
+    ).all()
     
     issue_form = IssueForm(user=request.user)
     return render(

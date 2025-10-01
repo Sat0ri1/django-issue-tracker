@@ -70,6 +70,39 @@ Visit [http://localhost:8000](http://localhost:8000) in your browser.
 
 ---
 
+## 🎨 Frontend Setup (TailwindCSS & DaisyUI)
+
+This project uses [TailwindCSS](https://tailwindcss.com/) and [DaisyUI](https://daisyui.com/) for styling.
+
+### 1. Install Node.js dependencies
+
+Make sure you have [Node.js](https://nodejs.org/) installed.
+
+```sh
+npm install
+```
+
+### 2. Build CSS
+
+To build and watch CSS changes during development, run:
+
+```sh
+npm run build:css
+```
+
+This will compile `src/input.css` to `static/css/tailwind.css` using TailwindCSS.
+
+### 3. Configuration files
+
+- `tailwind.config.js` – TailwindCSS configuration
+- `postcss.config.js` – PostCSS configuration
+- `package.json` – npm scripts and dependencies
+
+**Note:**  
+You need to run the CSS build command for styles to appear correctly in the app.
+
+---
+
 ## 🛠️ Notes
 
 - The `.env` file is required for the project to start.  
