@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
+from django.conf import settings
 
 class CustomUser(AbstractUser):
     ROLE_CHOICES = [
@@ -54,10 +55,12 @@ class Issue(models.Model):
 
 class Comment(models.Model):
     """Comments for issues"""
-    issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name="comments", verbose_name=_("Issue"))
-    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE, verbose_name=_("Author"))
-    text = models.TextField(verbose_name=_("Comment"))
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))
+    issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='authored_comments'
+    )
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return _("Comment by %(author)s on %(issue)s") % {"author": self.author.username, "issue": self.issue.title}
+        return f"Comment by {self.author.username} on {self.issue.title}"

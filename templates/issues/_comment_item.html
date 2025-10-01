@@ -1,11 +1,40 @@
 {% load i18n %}
-<div class="comment-item" data-testid="comment-item">
-  <div class="card p-3 bg-white shadow rounded mb-2" id="comment-{{ comment.pk }}">
-    <div class="text-sm text-gray-800 whitespace-pre-line">{{ comment.text }}</div>
-    <div class="mt-2 text-xs text-gray-500 flex gap-2">
-      <span>{% trans "by" %} {% if comment.author %}{{ comment.author.username }}{% else %}{% trans "Anonymous" %}{% endif %}</span>
-      <span>·</span>
-      <span>{{ comment.created_at|date:"Y-m-d H:i" }}</span>
-    </div>
+<div class="bg-white rounded-lg p-4 border border-gray-300 shadow-sm" data-testid="comment-item">
+  <div class="text-gray-800 whitespace-pre-line mb-2">{{ comment.text }}</div>
+  <div class="text-xs text-gray-500">
+    <span>{% trans "by" %} {{ comment.author.username }}</span>
+    <span class="ml-2">{{ comment.created_at|date:"Y-m-d H:i" }}</span>
   </div>
 </div>
+
+{% if oob_count is not None %}
+  <span id="comment-count-{{ issue.pk }}" hx-swap-oob="true">{{ oob_count }}</span>
+  {% if oob_count == 1 %}
+    <div id="no-comments-{{ issue.pk }}" hx-swap-oob="true"></div>
+  {% endif %}
+  {% if user.is_authenticated and user.role == 'assignee' or user.is_authenticated and user.role == 'admin' %}
+    <form id="comment-form-{{ issue.pk }}"
+          hx-swap-oob="true"
+          method="post"
+          hx-post="{% url 'add_comment' issue_pk=issue.pk %}"
+          hx-target="#comments-list-{{ issue.pk }}"
+          hx-swap="beforeend"
+          class="mt-6">
+      {% csrf_token %}
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text text-white font-medium">{% trans "Add Comment" %}</span>
+        </label>
+        <textarea
+          name="content"
+          rows="3"
+          class="textarea textarea-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-300 focus:ring-2 focus:ring-gray-300"
+          placeholder="{% trans 'Write your comment...' %}"
+          required></textarea>
+      </div>
+      <button type="submit" class="btn bg-gray-200 text-gray-700 border-none rounded-lg shadow-md hover:bg-gray-300 hover:shadow-lg mt-4">
+        {% trans "Add Comment" %}
+      </button>
+    </form>
+  {% endif %}
+{% endif %}

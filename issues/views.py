@@ -1,10 +1,10 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden
 from django.contrib.auth import get_user_model
 from django.db.models import Count
 from django.utils.translation import gettext as _
-from .models import Project, Issue
+from .models import Project, Issue, Comment 
 from .forms import IssueForm, CommentForm, ProjectForm, CustomUserCreationForm
 
 CustomUser = get_user_model()
@@ -19,12 +19,12 @@ def project_list(request):
 def project_detail(request, pk):
     # Show details for a single project, including its issues and issue creation form
     project = get_object_or_404(Project, pk=pk)
-    issues = (
-        project.issues
-        .select_related("author", "assignee")
-        .prefetch_related("comments__author")
-        .all()
-    )
+    issues = project.issues.select_related("author", "assignee").all()
+    
+    # Dodaj komentarze dla każdego issue
+    for issue in issues:
+        issue.comments_list = Comment.objects.filter(issue=issue).select_related('author').all()
+    
     issue_form = IssueForm(user=request.user)
     return render(
         request,
@@ -48,12 +48,19 @@ def project_issues_list(request, pk):
 def issue_detail(request, pk):
     # Show details for a single issue, including comments and comment form
     issue = get_object_or_404(Issue, pk=pk)
+    # Użyj Comment.objects.filter zamiast issue.comment
+    comments = Comment.objects.filter(issue=issue).select_related('author').all()
     comment_form = CommentForm()
     can_comment = request.user.is_authenticated and getattr(request.user, "role", "") in ("assignee", "admin")
     return render(
         request,
         "issues/detail.html",
-        {"issue": issue, "comment_form": comment_form, "can_comment": can_comment},
+        {
+            "issue": issue, 
+            "comments": comments,
+            "comment_form": comment_form, 
+            "can_comment": can_comment
+        },
     )
 
 
@@ -132,41 +139,36 @@ def create_issue(request, project_pk):
 
 @login_required
 def add_comment(request, issue_pk):
-    # Add a comment to an issue (only for assignee or admin)
     issue = get_object_or_404(Issue, pk=issue_pk)
+
     if not (hasattr(request.user, "role") and request.user.role in ("assignee", "admin")):
         return HttpResponseForbidden(_("Only assignees and admins can comment."))
+
     if request.method == "POST":
-        form = CommentForm(request.POST)
-        if form.is_valid():
-            comment = form.save(commit=False)
-            comment.issue = issue
-            comment.author = request.user
-            comment.save()
+        text = request.POST.get("content", "").strip()
+        if text:
+            comment = Comment.objects.create(issue=issue, author=request.user, text=text)
+
             if request.headers.get("HX-Request"):
-                # HTMX: return only the updated comments section after successful comment
-                return render(request, "issues/_comments_section.html", {
-                    "issue": issue,
-                    "comment_form": CommentForm(),  # empty form after success
-                    "keep_open": True,
-                    "user": request.user,
-                })
-            return redirect("issue_detail", pk=issue.pk)
+                # Policz aktualną liczbę komentarzy
+                count = Comment.objects.filter(issue=issue).count()
+                # Render pojedynczego komentarza + dane do OOB (licznik i usunięcie "No comments")
+                response = render(
+                    request,
+                    "issues/_comment_item.html",
+                    {
+                        "comment": comment,
+                        "issue": issue,
+                        "oob_count": count,      # używane w _comment_item.html do hx-swap-oob
+                    }
+                )
+                return response
+
+        # Pusty tekst przy HTMX – brak zmian
         if request.headers.get("HX-Request"):
-            # HTMX: return only the comments section with errors
-            return render(request, "issues/_comments_section.html", {
-                "issue": issue,
-                "comment_form": form,  # form with errors
-                "keep_open": True,
-                "user": request.user,
-            })
-        # If form is invalid, re-render issue detail with errors (classic)
-        return render(request, "issues/detail.html", {
-            "issue": issue,
-            "comment_form": form,
-            "keep_open": True,
-        })
-    return redirect("issue_detail", pk=issue_pk)
+            return HttpResponse(status=204)
+
+    return redirect("project_detail", pk=issue.project.pk)
 
 
 @login_required

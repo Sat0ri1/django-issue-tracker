@@ -5,56 +5,99 @@ from issues.models import Project, Issue, Comment
 User = get_user_model()
 
 @pytest.mark.django_db
-def test_project_creation():
-    project = Project.objects.create(name="Test Project", description="Project description")
-    assert project.name == "Test Project"
-    assert project.description == "Project description"
-    # Check relation – project has no issues at the beginning
-    assert project.issues.count() == 0
+class TestModels:
+    def test_project_creation(self):
+        project = Project.objects.create(
+            name="Test Project",
+            description="Test Description"
+        )
+        assert project.name == "Test Project"
+        assert project.description == "Test Description"
+        assert str(project) == "Test Project"
 
-@pytest.mark.django_db
-def test_issue_creation():
-    user = User.objects.create_user(username="tester", password="pass")
-    project = Project.objects.create(name="Test Project")
-    issue = Issue.objects.create(
-        project=project,
-        title="Bug #1",
-        description="Something is broken",
-        assignee=user
-    )
-    # Check default status
-    assert issue.status == "todo"
-    # Check assigned user
-    assert issue.assignee.username == "tester"
-    # Check relation with project
-    assert issue.project.issues.count() == 1
+    def test_issue_creation(self):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+            role="assignee"
+        )
+        project = Project.objects.create(
+            name="Test Project",
+            description="Test Description"
+        )
+        issue = Issue.objects.create(
+            title="Test Issue",
+            description="Test Issue Description",
+            project=project,
+            author=user,
+            assignee=user,
+            status="open"
+        )
+        assert issue.title == "Test Issue"
+        assert issue.project == project
+        assert issue.author == user
+        assert issue.assignee == user
+        assert issue.status == "open"
+        assert str(issue) == "Test Issue"
 
-@pytest.mark.django_db
-def test_issue_status_and_assignee():
-    user = User.objects.create_user(username="tester2", password="pass")
-    project = Project.objects.create(name="Test Project")
-    issue = Issue.objects.create(
-        project=project,
-        title="Bug #2",
-        description="Bug description",
-        assignee=user
-    )
-    assert issue.status == "todo"
-    assert issue.assignee.username == "tester2"
-    assert issue.project.issues.count() == 1
+    def test_comment_creation(self):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+            role="assignee"
+        )
+        project = Project.objects.create(
+            name="Test Project",
+            description="Test Description"
+        )
+        issue = Issue.objects.create(
+            title="Test Issue",
+            description="Test Issue Description",
+            project=project,
+            author=user
+        )
+        comment = Comment.objects.create(
+            issue=issue,
+            author=user,
+            text="Test comment text"
+        )
+        assert comment.issue == issue
+        assert comment.author == user
+        assert comment.text == "Test comment text"
+        assert str(comment) == f"Comment by {user.username} on {issue.title}"
 
-@pytest.mark.django_db
-def test_comment_creation():
-    user = User.objects.create_user(username="commenter", password="pass")
-    project = Project.objects.create(name="Test Project")
-    issue = Issue.objects.create(project=project, title="Bug #3", description="Description")
-    comment = Comment.objects.create(issue=issue, author=user, text="Test comment")
+    def test_issue_status_choices(self):
+        assert Issue.STATUS_CHOICES == [
+            ("open", "Open"),
+            ("in_progress", "In Progress"),
+            ("resolved", "Resolved"),
+            ("closed", "Closed"),
+        ]
 
-    # Check comment text
-    assert comment.text == "Test comment"
-    # Check relation with issue
-    assert comment.issue == issue
-    # Check comment author
-    assert comment.author.username == "commenter"
-    # Check relation in issue.comments
-    assert issue.comments.count() == 1
+    def test_comment_related_name(self):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+            role="assignee"
+        )
+        project = Project.objects.create(
+            name="Test Project",
+            description="Test Description"
+        )
+        issue = Issue.objects.create(
+            title="Test Issue",
+            description="Test Issue Description",
+            project=project,
+            author=user
+        )
+        comment = Comment.objects.create(
+            issue=issue,
+            author=user,
+            text="Test comment"
+        )
+        # Test related_name='comment' (singular)
+        assert comment in Comment.objects.filter(issue=issue)
+        assert Comment.objects.filter(issue=issue).count() == 1

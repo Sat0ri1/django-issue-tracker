@@ -1,65 +1,151 @@
 {% load i18n %}
-{% load widget_tweaks %}
 
-<div id="comments-section-{{ issue.pk }}" class="mt-8" data-testid="comments-section">
-  <div class="bg-gray-700 rounded-lg shadow-xl p-6">
-    <!-- Comments section header -->
-    <h3 class="text-lg font-semibold text-white mb-5">
-      {% blocktrans with count=issue.comments.count %}Comments ({{ count }}){% endblocktrans %}
+<style>
+.comments-toggle {
+  display: none;
+}
+
+.comments-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.comments-toggle:checked ~ .comments-content {
+  max-height: 1000px;
+  transition: max-height 0.5s ease-in;
+}
+
+.comments-toggle:checked ~ .comments-content .comments-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.chevron {
+  transition: transform 0.3s ease;
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 8px solid white;
+  margin-left: 8px;
+}
+
+.comments-toggle:checked ~ label .chevron {
+  transform: rotate(180deg);
+}
+
+.comments-header {
+  padding: 1rem 1.5rem;
+  margin: 0;
+}
+
+.comments-toggle:checked ~ .comments-header {
+  border-bottom: 1px solid #4b5563;
+  margin-bottom: 1.5rem;
+}
+
+.comments-body {
+  padding: 0 1.5rem 1.5rem 1.5rem;
+}
+
+.comments-list {
+  scrollbar-width: thin;
+  scrollbar-color: #6b7280 #374151;
+}
+
+.comments-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.comments-list::-webkit-scrollbar-track {
+  background: #374151;
+  border-radius: 3px;
+}
+
+.comments-list::-webkit-scrollbar-thumb {
+  background: #6b7280;
+  border-radius: 3px;
+}
+</style>
+
+<div class="bg-gray-700 rounded-lg shadow-xl border border-gray-600 mt-6" id="comments-section-{{ issue.pk }}">
+  <input type="checkbox" id="toggle-comments-{{ issue.pk }}" class="comments-toggle">
+  <label for="toggle-comments-{{ issue.pk }}" class="comments-header flex justify-between items-center cursor-pointer">
+    <h3 class="text-xl font-bold text-white">
+      {% trans "Comments" %} (
+        <span id="comment-count-{{ issue.pk }}">
+          {% if comments %}{{ comments|length }}
+          {% elif issue.comments_list %}{{ issue.comments_list|length }}
+          {% else %}0{% endif %}
+        </span>
+      )
     </h3>
+    <span class="chevron"></span>
+  </label>
 
-    <!-- Comments list with scrolling -->
-    <div id="comments-list-{{ issue.pk }}" 
-         class="space-y-4 mb-6 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 pr-2" 
-         data-testid="comments-list">
-      {% for comment in issue.comments.all %}
-        {% include "issues/_comment_item.html" %}
-      {% empty %}
-        <p class="text-gray-400 text-sm text-center" data-testid="no-comments">{% trans "No comments" %}</p>
-      {% endfor %}
-    </div>
+  <div class="comments-content">
+    <div class="comments-body">
+      <div class="comments-list space-y-4 mb-6" id="comments-list-{{ issue.pk }}">
+        {% if comments %}
+          {% for comment in comments %}
+            {% include 'issues/_comment_item.html' with comment=comment %}
+          {% endfor %}
+        {% elif issue.comments_list %}
+          {% for comment in issue.comments_list %}
+            {% include 'issues/_comment_item.html' with comment=comment %}
+          {% endfor %}
+        {% else %}
+          <div class="text-center py-8 text-gray-400" id="no-comments-{{ issue.pk }}">
+            <p class="text-lg">{% trans "No comments" %}</p>
+          </div>
+        {% endif %}
+      </div>
 
-    <!-- Comment form - ALWAYS VISIBLE -->
-    {% if user.is_authenticated %}
-      {% if user.role == "assignee" or user.role == "admin" %}
-        {% trans "Write your comment..." as comment_ph %}
-        <form 
-          method="post" 
-          action="{% url 'add_comment' issue_pk=issue.pk %}" 
-          hx-post="{% url 'add_comment' issue_pk=issue.pk %}" 
-          hx-target="#comments-section-{{ issue.pk }}" 
-          hx-swap="outerHTML" 
-          class="space-y-4" 
-          data-testid="comment-form">
-          {% csrf_token %}
-          <div class="form-control">
-            <textarea 
-              name="text" 
-              class="textarea textarea-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-300 focus:ring-2 focus:ring-gray-300 placeholder-gray-300" 
-              rows="4" 
-              placeholder="{{ comment_ph }}" 
-              data-testid="comment-text"></textarea>
-            {% for error in comment_form.text.errors %}
-              <span class="text-red-400 text-sm" data-testid="comment-error">{{ error }}</span>
-            {% endfor %}
-          </div>
-          <div class="flex justify-end">
-            <button type="submit" 
-                    class="btn btn-sm bg-gray-200 text-gray-700 border-none rounded-lg shadow-md hover:bg-gray-300 hover:shadow-lg transition-all duration-200 px-5" 
-                    data-testid="comment-submit">
-              {% trans "+ Add comment" %}
-            </button>
-          </div>
-        </form>
+      {% if user.is_authenticated and user.role == 'assignee' or user.is_authenticated and user.role == 'admin' %}
+      <form id="comment-form-{{ issue.pk }}"
+            method="post"
+            hx-post="{% url 'add_comment' issue_pk=issue.pk %}"
+            hx-target="#comments-list-{{ issue.pk }}"
+            hx-swap="beforeend"
+            class="mt-6">
+        {% csrf_token %}
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text text-white font-medium">{% trans "Add Comment" %}</span>
+          </label>
+          <textarea
+            name="content"
+            rows="3"
+            class="textarea textarea-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-300 focus:ring-2 focus:ring-gray-300"
+            placeholder="{% trans 'Write your comment...' %}"
+            required></textarea>
+        </div>
+        <button type="submit" class="btn bg-gray-200 text-gray-700 border-none rounded-lg shadow-md hover:bg-gray-300 hover:shadow-lg mt-4">
+          {% trans "Add Comment" %}
+        </button>
+      </form>
       {% else %}
-        <p class="text-gray-400 text-xs">{% trans "Only assignees and admins can add comments." %}</p>
+        <div class="text-center py-4 text-gray-400">
+          <p>{% trans "Only assignees and admins can add comments." %}</p>
+        </div>
       {% endif %}
-    {% else %}
-      <p class="text-gray-400 text-xs">
-        {% trans "You must" %} 
-        <a href="{% url 'login' %}" class="text-blue-500 underline hover:text-blue-700">{% trans "log in" %}</a> 
-        {% trans "to add a comment." %}
-      </p>
-    {% endif %}
+    </div>
   </div>
 </div>
+
+<script>
+function updateCommentCount(issueId) {
+  const countElement = document.getElementById(`comment-count-${issueId}`);
+  const currentCount = parseInt(countElement.textContent);
+  countElement.textContent = currentCount + 1;
+}
+
+function removeNoComments(issueId) {
+  const noCommentsElement = document.getElementById(`no-comments-${issueId}`);
+  if (noCommentsElement) {
+    noCommentsElement.remove();
+  }
+}
+</script>
