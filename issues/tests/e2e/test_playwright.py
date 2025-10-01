@@ -1,10 +1,8 @@
 import pytest
 import os
 from playwright.sync_api import Page, expect
-from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.contrib.auth import get_user_model
 from issues.models import Project, Issue, Comment
-from django.test import TransactionTestCase
 
 # Allow unsafe async operations in Django for Playwright tests
 os.environ.setdefault('DJANGO_ALLOW_ASYNC_UNSAFE', '1')
@@ -176,7 +174,7 @@ def test_authenticated_user_can_create_issue(page: Page, live_server, test_proje
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("role", ["admin", "assignee", "reporter"])
 def test_all_roles_can_create_issues(page: Page, live_server, test_project, role):
-    user = create_user(f"user_{role}", "password123", role)
+    create_user(f"user_{role}", "password123", role)
     
     page.goto(f"{live_server.url}/login/")
     page.get_by_test_id("login-username").fill(f"user_{role}")
@@ -212,7 +210,7 @@ def test_admin_can_change_issue_status(page: Page, live_server, test_project, te
     
     page.goto(f"{live_server.url}/projects/{test_project.pk}/")
     
-    page.locator(f"select[name='status']").first.select_option("in_progress")
+    page.locator("select[name='status']").first.select_option("in_progress")
     page.wait_for_timeout(1000)  # Wait for HTMX
     
     test_issue.refresh_from_db()
@@ -221,7 +219,7 @@ def test_admin_can_change_issue_status(page: Page, live_server, test_project, te
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("role", ["admin", "assignee"])
 def test_privileged_users_can_change_status(page: Page, live_server, test_project, test_issue, role):
-    user = create_user(f"user_{role}", "password123", role)
+    create_user(f"user_{role}", "password123", role)
     
     page.goto(f"{live_server.url}/login/")
     page.get_by_test_id("login-username").fill(f"user_{role}")
@@ -259,7 +257,7 @@ def test_admin_can_add_comment(page: Page, live_server, test_project, test_issue
     page.locator(f"#toggle-comments-{test_issue.pk}").click()
     
     # Add comment
-    page.locator(f"textarea[name='content']").fill("Test comment")
+    page.locator("textarea[name='content']").fill("Test comment")
     page.locator("button[type='submit']").click()
     
     page.wait_for_timeout(1000)  # Wait for HTMX
@@ -280,7 +278,7 @@ def test_comment_count_updates_with_htmx(page: Page, live_server, test_project, 
     
     # Open comments and add one
     page.locator(f"#toggle-comments-{test_issue.pk}").click()
-    page.locator(f"textarea[name='content']").fill("Test comment")
+    page.locator("textarea[name='content']").fill("Test comment")
     page.locator("button[type='submit']").click()
     
     page.wait_for_timeout(1000)
