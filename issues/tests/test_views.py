@@ -39,9 +39,18 @@ class TestViews:
         assert self.project.name.encode() in response.content
 
     def test_project_detail_view(self):
+        # Najpierw utwórz issue, żeby sekcja komentarzy się pojawiła
+        Issue.objects.create(
+            title="Test Issue",
+            description="Test Description", 
+            project=self.project,
+            author=self.user
+        )
+        
         response = self.client.get(reverse('project_detail', kwargs={'pk': self.project.pk}))
         assert response.status_code == 200
         assert self.project.name.encode() in response.content
+        # Teraz sekcja komentarzy powinna być widoczna
         assert b'Komentarze' in response.content or b'Comments' in response.content
 
     def test_project_detail_with_issues_and_comments(self):
