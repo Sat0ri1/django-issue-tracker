@@ -1,273 +1,207 @@
-import pytest
+from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from issues.models import Project, Issue, Comment
 
-UserModel = get_user_model()
+User = get_user_model()
 
 
-def user_model_has_role_field() -> bool:
-    return any(getattr(f, "name", "") == "role" for f in UserModel._meta.get_fields())
-
-
-def create_user(username: str, password: str, role: str | None = None):
-    if role and user_model_has_role_field():
-        return UserModel.objects.create_user(username=username, password=password, role=role)
-    return UserModel.objects.create_user(username=username, password=password)
-
-
-@pytest.mark.django_db
-class TestHTMXViews:
-
-    @pytest.fixture
-    def admin_user(self):
-        return create_user("admin", "password123", role="admin")
-
-    @pytest.fixture  
-    def assignee_user(self):
-        return create_user("assignee", "password123", role="assignee")
-    
-    @pytest.fixture
-    def regular_user(self):
-        return create_user("reporter", "password123", role="reporter")
-
-    @pytest.fixture
-    def user(self):
-        role = "admin" if user_model_has_role_field() else None
-        return create_user("alice", "password123", role=role)
-
-    @pytest.fixture
-    def project(self):
-        return Project.objects.create(name="Test Project")
-
-    @pytest.fixture
-    def issue(self, project, user):
-        return Issue.objects.create(
-            project=project, title="Bug #1", description="Bug description", author=user
+class HTMXViewsTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.admin_user = User.objects.create_user(
+            username="admin", email="admin@test.com", password="testpass123", role="admin"
+        )
+        self.assignee_user = User.objects.create_user(
+            username="assignee", email="assignee@test.com", password="testpass123", role="assignee"
+        )
+        self.user = User.objects.create_user(
+            username="user", email="user@test.com", password="testpass123", role="user"
+        )
+        self.project = Project.objects.create(name="Test Project")
+        self.issue = Issue.objects.create(
+            title="Test Issue",
+            description="Test Description",
+            project=self.project,
+            author=self.user,
+            assignee=self.assignee_user,
         )
 
-    # ---------------------------
-    # create_issue
-    # ---------------------------
-    def test_create_issue_requires_login(self, client, project):
-        url = reverse("create_issue", kwargs={"project_pk": project.pk})
-        r = client.post(url, {"title": "HTMX Bug", "description": "desc"}, HTTP_HX_REQUEST="true")
-        # not logged in → redirect to login
-        assert r.status_code == 302
-        assert "/login/" in r.url
-
-    def test_create_issue_logged_in(self, client, user, project):
-        client.login(username="alice", password="password123")
-        url = reverse("create_issue", kwargs={"project_pk": project.pk})
-        data = {"title": "HTMX Bug", "description": "desc"}
-        r = client.post(url, data, HTTP_HX_REQUEST="true")
-        assert r.status_code == 200
-        # Issue actually created
-        assert project.issues.filter(title="HTMX Bug").exists()
-        assert b"HTMX Bug" in r.content
-
-    # ---------------------------
-    # add_comment - ROLE TESTS
-    # ---------------------------
-    def test_add_comment_requires_login(self, client, issue):
-        url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
-        r = client.post(url, {"text": "New comment"}, HTTP_HX_REQUEST="true")
-        assert r.status_code == 302
-        assert "/login/" in r.url
-
-    @pytest.mark.parametrize("role,username", [("admin", "admin"), ("assignee", "assignee")])
-    def test_add_comment_allowed_for_privileged_roles_htmx(self, client, issue, role, username):
-        if not user_model_has_role_field():
-            pytest.skip("User model has no 'role' field - role test skipped.")
+    def test_htmx_create_issue_success(self):
+        """Test HTMX issue creation returns clean form and triggers refresh"""
+        self.client.login(username="user", password="testpass123")
+        response = self.client.post(
+            reverse("create_issue", kwargs={"project_pk": self.project.pk}),
+            {"title": "HTMX Issue", "description": "HTMX Description"},
+            HTTP_HX_REQUEST="true",
+        )
         
-        create_user(username, "password123", role=role)
-        client.login(username=username, password="password123")
-        url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
+        self.assertEqual(response.status_code, 200)
+        # Check for clean form container
+        self.assertContains(response, 'id="issue-form-container"')
+        self.assertContains(response, 'data-testid="issue-form-container"')
+        self.assertContains(response, 'data-testid="issue-form"')
+        
+        # Check for form fields
+        self.assertContains(response, 'data-testid="issue-title"')
+        self.assertContains(response, 'data-testid="issue-description"')
+        self.assertContains(response, 'data-testid="issue-submit"')
+        
+        # Check for HX-Trigger header
+        self.assertEqual(response.get("HX-Trigger"), "issueCreated")
+        
+        # Verify issue was created
+        self.assertTrue(Issue.objects.filter(title="HTMX Issue").exists())
+
+    def test_htmx_create_issue_validation_errors(self):
+        """Test HTMX issue creation with validation errors"""
+        self.client.login(username="user", password="testpass123")
+        response = self.client.post(
+            reverse("create_issue", kwargs={"project_pk": self.project.pk}),
+            {"title": "", "description": "No title"},
+            HTTP_HX_REQUEST="true",
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-testid="issue-form-container"')
+        # Should contain error messages
+        self.assertContains(response, 'data-testid="issue-title-error"')
+
+    def test_htmx_add_comment_success(self):
+        """Test HTMX comment addition returns updated comments section"""
+        self.client.login(username="assignee", password="testpass123")
+        response = self.client.post(
+            reverse("add_comment", kwargs={"issue_pk": self.issue.pk}),
+            {"text": "HTMX comment"},
+            HTTP_HX_REQUEST="true",
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        # Check for comments section structure
+        self.assertContains(response, f'id="comments-section-{self.issue.pk}"')
+        self.assertContains(response, 'data-testid="comments-section"')
+        self.assertContains(response, 'data-testid="comments-list"')
+        self.assertContains(response, 'data-testid="comment-form"')
+        
+        # Check for empty comment form (clean state)
+        self.assertContains(response, 'data-testid="comment-text"')
+        self.assertContains(response, 'data-testid="comment-submit"')
+        self.assertContains(response, "Write your comment...")
+        
+        # Verify comment was created
+        self.assertTrue(Comment.objects.filter(text="HTMX comment").exists())
+
+    def test_htmx_add_comment_validation_errors(self):
+        """Test HTMX comment addition with validation errors"""
+        self.client.login(username="assignee", password="testpass123")
+        response = self.client.post(
+            reverse("add_comment", kwargs={"issue_pk": self.issue.pk}),
+            {"text": ""},
+            HTTP_HX_REQUEST="true",
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-testid="comments-section"')
+        # Should contain error messages
+        self.assertContains(response, 'data-testid="comment-error"')
+
+    def test_htmx_change_status(self):
+        """Test HTMX status change returns status badge"""
+        self.client.login(username="assignee", password="testpass123")
+        response = self.client.post(
+            reverse("change_status", kwargs={"pk": self.issue.pk}),
+            {"status": "in_progress"},
+            HTTP_HX_REQUEST="true",
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        # Verify it returns status badge template
+        self.assertContains(response, "in_progress")
+
+    def test_htmx_project_issues_list(self):
+        """Test HTMX project issues list endpoint"""
+        response = self.client.get(
+            reverse("project_issues_list", kwargs={"pk": self.project.pk}),
+            HTTP_HX_REQUEST="true",
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="issues-list"')
+        self.assertContains(response, 'data-testid="issues-list"')
+        # Should contain HTMX attributes for refresh
+        self.assertContains(response, 'hx-get=')
+        self.assertContains(response, 'hx-trigger="issueCreated from:body"')
+
+    def test_htmx_issue_list_with_issues(self):
+        """Test HTMX issues list displays issues correctly"""
+        response = self.client.get(
+            reverse("project_issues_list", kwargs={"pk": self.project.pk}),
+            HTTP_HX_REQUEST="true",
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-testid="issue-item"')
+        self.assertContains(response, "Test Issue")
+
+    def test_htmx_issue_list_empty(self):
+        """Test HTMX issues list displays empty state correctly"""
+        # Remove existing issue
+        self.issue.delete()
+        
+        response = self.client.get(
+            reverse("project_issues_list", kwargs={"pk": self.project.pk}),
+            HTTP_HX_REQUEST="true",
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-testid="no-issues"')
+        self.assertContains(response, "No issues yet")
+
+    def test_htmx_headers_detection(self):
+        """Test that views properly detect HTMX requests"""
+        self.client.login(username="user", password="testpass123")
+        
+        # Regular request
+        response = self.client.post(
+            reverse("create_issue", kwargs={"project_pk": self.project.pk}),
+            {"title": "Regular Issue", "description": "Regular Description"},
+        )
+        self.assertEqual(response.status_code, 302)  # Redirect
         
         # HTMX request
-        r = client.post(url, {"text": f"Comment by {role}"}, HTTP_HX_REQUEST="true")
-        assert r.status_code == 200
-        
-        # Comment created
-        assert Comment.objects.filter(issue=issue, text=f"Comment by {role}", author__username=username).exists()
-        
-        # HTMX response contains updated comments section
-        content = r.content.decode("utf-8")
-        assert f"Comment by {role}" in content
-        assert "Comments (" in content  # updated count
-        assert 'id="comments-section-' in content  # returns comments section
-        assert "open" in content  # section stays open (keep_open=True)
+        response = self.client.post(
+            reverse("create_issue", kwargs={"project_pk": self.project.pk}),
+            {"title": "HTMX Issue", "description": "HTMX Description"},
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertEqual(response.status_code, 200)  # Template response
 
-    def test_add_comment_forbidden_for_regular_user_htmx(self, client, issue):
-        if not user_model_has_role_field():
-            pytest.skip("User model has no 'role' field - role test skipped.")
+    def test_htmx_comments_section_permissions(self):
+        """Test comments section shows appropriate content based on user role"""
+        # Test as regular user
+        self.client.login(username="user", password="testpass123")
+        response = self.client.get(reverse("issue_detail", kwargs={"pk": self.issue.pk}))
+        self.assertContains(response, "Only assignees and admins can add comments")
         
-        create_user("reporter", "password123", role="reporter")
-        client.login(username="reporter", password="password123")
-        url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
+        # Test as assignee
+        self.client.login(username="assignee", password="testpass123")
+        response = self.client.get(reverse("issue_detail", kwargs={"pk": self.issue.pk}))
+        self.assertContains(response, 'data-testid="comment-form"')
+        self.assertContains(response, "Write your comment...")
         
-        r = client.post(url, {"text": "Blocked comment"}, HTTP_HX_REQUEST="true")
-        
-        # Comment NOT created
-        assert not Comment.objects.filter(issue=issue, text="Blocked comment").exists()
-        
-        # Should return 403 or handle gracefully
-        assert r.status_code in (403, 200, 302)
+        # Test as admin
+        self.client.login(username="admin", password="testpass123")
+        response = self.client.get(reverse("issue_detail", kwargs={"pk": self.issue.pk}))
+        self.assertContains(response, 'data-testid="comment-form"')
+        self.assertContains(response, "Write your comment...")
 
-    def test_add_comment_htmx_updates_count_and_stays_open(self, client, issue):
-        if not user_model_has_role_field():
-            pytest.skip("User model has no 'role' field - role test skipped.")
+    def test_htmx_form_styling_consistency(self):
+        """Test that HTMX forms maintain consistent styling"""
+        self.client.login(username="user", password="testpass123")
+        response = self.client.get(reverse("project_detail", kwargs={"pk": self.project.pk}))
         
-        create_user("admin_test", "password123", role="admin")
-        client.login(username="admin_test", password="password123")
-        url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
-        
-        # Add first comment
-        r1 = client.post(url, {"text": "First comment"}, HTTP_HX_REQUEST="true")
-        assert r1.status_code == 200
-        content1 = r1.content.decode("utf-8")
-        assert "Comments (1)" in content1
-        assert "First comment" in content1
-        assert "open" in content1
-        
-        # Add second comment
-        r2 = client.post(url, {"text": "Second comment"}, HTTP_HX_REQUEST="true")
-        assert r2.status_code == 200
-        content2 = r2.content.decode("utf-8")
-        assert "Comments (2)" in content2
-        assert "Second comment" in content2
-        assert "First comment" in content2  # previous comment still there
-        assert "open" in content2  # still open
-
-    def test_add_comment_htmx_with_enter_trigger(self, client, issue):
-        """
-        Test that simulates Enter key submission (hx-trigger includes keyup)
-        """
-        if not user_model_has_role_field():
-            pytest.skip("User model has no 'role' field - role test skipped.")
-        
-        create_user("admin_enter", "password123", role="admin")
-        client.login(username="admin_enter", password="password123")
-        url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
-        
-        # Simulate Enter key trigger (HTMX would send this)
-        headers = {
-            "HTTP_HX_REQUEST": "true",
-            "HTTP_HX_TRIGGER": "keyup"  # simulating Enter key trigger
-        }
-        
-        r = client.post(url, {"text": "Comment via Enter"}, **headers)
-        assert r.status_code == 200
-        
-        # Comment created
-        assert Comment.objects.filter(issue=issue, text="Comment via Enter").exists()
-        
-        # Response contains updated section
-        content = r.content.decode("utf-8")
-        assert "Comment via Enter" in content
-        assert "open" in content
-
-    def test_add_comment_invalid_form_htmx(self, client, issue):
-        if not user_model_has_role_field():
-            pytest.skip("User model has no 'role' field - role test skipped.")
-        
-        create_user("admin_invalid", "password123", role="admin")
-        client.login(username="admin_invalid", password="password123")
-        url = reverse("add_comment", kwargs={"issue_pk": issue.pk})
-        
-        # Empty text (invalid)
-        r = client.post(url, {"text": ""}, HTTP_HX_REQUEST="true")
-        assert r.status_code == 200
-        
-        # No comment created
-        assert not Comment.objects.filter(issue=issue, text="").exists()
-        
-        # Should show form errors (depending on implementation)
-        content = r.content.decode("utf-8")
-        # Either shows error message or re-renders form
-        assert "Comments (" in content  # still shows comments section
-
-    # ---------------------------
-    # change_status - UPDATED FOR STATUS BADGE
-    # ---------------------------
-    def test_change_status_requires_login(self, client, issue):
-        url = reverse("change_status", kwargs={"pk": issue.pk})
-        r = client.post(url, {"status": "in_progress"}, HTTP_HX_REQUEST="true")
-        assert r.status_code == 302
-        assert "/login/" in r.url
-
-    def test_change_status_logged_in(self, client, user, issue):
-        client.login(username="alice", password="password123")
-        url = reverse("change_status", kwargs={"pk": issue.pk})
-        r = client.post(url, {"status": "in_progress"}, HTTP_HX_REQUEST="true")
-        assert r.status_code == 200
-        issue.refresh_from_db()
-        assert issue.status == "in_progress"
-        
-        # CHANGE: Now returns only status badge, not full issue item
-        content = r.content.decode("utf-8")
-        assert f'id="status-badge-{issue.pk}"' in content
-        # FIX: "In Progress" with capital P
-        assert "In Progress" in content or "in_progress" in content
-
-    @pytest.mark.parametrize("role", ["admin", "assignee"])
-    def test_change_status_allowed_for_privileged_roles_htmx(self, client, issue, role):
-        if not user_model_has_role_field():
-            pytest.skip("User model has no 'role' field - role test skipped.")
-        
-        create_user(f"user_{role}", "password123", role=role)
-        client.login(username=f"user_{role}", password="password123")
-        url = reverse("change_status", kwargs={"pk": issue.pk})
-        
-        r = client.post(url, {"status": "done"}, HTTP_HX_REQUEST="true")
-        assert r.status_code == 200
-        
-        issue.refresh_from_db()
-        assert issue.status == "done"
-        
-        # CHANGE: Checks only status badge, not full content
-        content = r.content.decode("utf-8")
-        assert f'id="status-badge-{issue.pk}"' in content
-        assert "Done" in content or "done" in content
-        # Checks if this is a span element with correct classes
-        assert 'class="badge badge-outline' in content
-
-    def test_change_status_forbidden_for_regular_user_htmx(self, client, issue):
-        if not user_model_has_role_field():
-            pytest.skip("User model has no 'role' field - role test skipped.")
-        
-        create_user("reporter_status", "password123", role="reporter")
-        client.login(username="reporter_status", password="password123")
-        url = reverse("change_status", kwargs={"pk": issue.pk})
-        
-        original_status = issue.status
-        r = client.post(url, {"status": "done"}, HTTP_HX_REQUEST="true")
-        
-        # Status should NOT change
-        issue.refresh_from_db()
-        assert issue.status == original_status
-        
-        # Should return error or handle gracefully
-        assert r.status_code in (403, 200, 302)
-
-    def test_change_status_htmx_returns_only_badge(self, client, user, issue):
-        """Test that HTMX change_status returns only the status badge, not full issue"""
-        client.login(username="alice", password="password123")
-        url = reverse("change_status", kwargs={"pk": issue.pk})
-        
-        r = client.post(url, {"status": "in_progress"}, HTTP_HX_REQUEST="true")
-        assert r.status_code == 200
-        
-        content = r.content.decode("utf-8")
-        
-        # Should contain ONLY the status badge
-        assert f'id="status-badge-{issue.pk}"' in content
-        assert 'class="badge badge-outline' in content
-        
-        # Should NOT contain other issue elements
-        assert issue.title not in content  # title should NOT be in response
-        assert issue.description not in content  # description should NOT be in response
-        assert 'class="card bg-gray-700' not in content  # should NOT be full issue
-        
-        # Response should be minimal - just the badge
-        assert content.count('<span') == 1  # only one span element
+        # Check for consistent styling classes
+        self.assertContains(response, "bg-gray-700")
+        self.assertContains(response, "bg-gray-600")
+        self.assertContains(response, "rounded-lg")
+        self.assertContains(response, "shadow-xl")

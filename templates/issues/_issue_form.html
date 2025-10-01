@@ -1,0 +1,47 @@
+{% load widget_tweaks %}
+{% load i18n %}
+<div id="issue-form-container" class="max-w-md mx-auto bg-gray-700 rounded-lg shadow-xl p-8 mb-10 border border-gray-600" data-testid="issue-form-container">
+  <h2 class="text-xl font-bold text-white mb-5 text-center">{% trans "Add New Issue" %}</h2>
+  <form
+    method="post"
+    action="{% url 'create_issue' project_pk=project.pk %}"
+    hx-post="{% url 'create_issue' project_pk=project.pk %}"
+    hx-target="#issue-form-container"
+    hx-swap="outerHTML"
+    class="space-y-6"
+    data-testid="issue-form">
+    {% csrf_token %}
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text text-white font-medium">{{ issue_form.title.label }}</span>
+      </label>
+      {% render_field issue_form.title class="input input-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-300 focus:ring-2 focus:ring-gray-300" placeholder="Enter issue title" data-testid="issue-title" %}
+      {% for error in issue_form.title.errors %}
+        <span class="text-red-400 text-sm" data-testid="issue-title-error">{{ error }}</span>
+      {% endfor %}
+    </div>
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text text-white font-medium">{{ issue_form.description.label }}</span>
+      </label>
+      {% render_field issue_form.description class="textarea textarea-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-300 focus:ring-2 focus:ring-gray-300" rows="4" placeholder="Describe the issue" data-testid="issue-description" %}
+      {% for error in issue_form.description.errors %}
+        <span class="text-red-400 text-sm" data-testid="issue-description-error">{{ error }}</span>
+      {% endfor %}
+    </div>
+    {% if user.is_authenticated and user.role == "admin" %}
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text text-white font-medium">{{ issue_form.assignee.label }}</span>
+      </label>
+      {% render_field issue_form.assignee class="select select-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-300 focus:ring-2 focus:ring-gray-300" data-testid="issue-assignee" %}
+      {% for error in issue_form.assignee.errors %}
+        <span class="text-red-400 text-sm" data-testid="issue-assignee-error">{{ error }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <button type="submit" class="btn bg-gray-200 text-gray-700 border-none rounded-lg shadow-md hover:bg-gray-300 hover:shadow-lg w-full px-6 mt-2" data-testid="issue-submit">
+      {% trans "Add Issue" %}
+    </button>
+  </form>
+</div>

@@ -19,13 +19,30 @@ def project_list(request):
 def project_detail(request, pk):
     # Show details for a single project, including its issues and issue creation form
     project = get_object_or_404(Project, pk=pk)
-    issues = project.issues.select_related("author", "assignee").all()
+    issues = (
+        project.issues
+        .select_related("author", "assignee")
+        .prefetch_related("comments__author")
+        .all()
+    )
     issue_form = IssueForm(user=request.user)
     return render(
         request,
         "projects/detail.html",
         {"project": project, "issue_form": issue_form, "issues": issues},
     )
+
+
+def project_issues_list(request, pk):
+    # Return only the issues list for a specific project (for HTMX refresh)
+    project = get_object_or_404(Project, pk=pk)
+    issues = (
+        project.issues
+        .select_related("author", "assignee")
+        .prefetch_related("comments__author")
+        .all()
+    )
+    return render(request, "issues/_issue_list.html", {"project": project, "issues": issues})
 
 
 def issue_detail(request, pk):
@@ -84,17 +101,32 @@ def create_issue(request, project_pk):
 
             issue.save()
             if request.headers.get("HX-Request"):
-                # HTMX: return only the new issue item
-                return render(request, "issues/_issue_item.html", {"issue": issue})
+                # HTMX: return clean form after successful creation with trigger for list refresh
+                clean_form = IssueForm(user=request.user)
+                response = render(request, "issues/_issue_form.html", {
+                    "issue_form": clean_form,
+                    "project": project,
+                    "user": request.user,
+                })
+                # Add custom header to trigger issues list refresh
+                response['HX-Trigger'] = 'issueCreated'
+                return response
             return redirect("project_detail", pk=project.pk)
         else:
-            # If form is invalid, re-render the project detail page with errors
-            issues = project.issues.select_related("author", "assignee").all()
-            return render(
-                request,
-                "projects/detail.html",
-                {"project": project, "issue_form": form, "issues": issues},
-            )
+            if request.headers.get("HX-Request"):
+                # HTMX: return form with validation errors
+                return render(request, "issues/_issue_form.html", {
+                    "issue_form": form,
+                    "project": project,
+                    "user": request.user,
+                })
+            else:
+                issues = project.issues.select_related("author", "assignee").all()
+                return render(
+                    request,
+                    "projects/detail.html",
+                    {"project": project, "issue_form": form, "issues": issues},
+                )
     return redirect("project_detail", pk=project.pk)
 
 
@@ -112,11 +144,28 @@ def add_comment(request, issue_pk):
             comment.author = request.user
             comment.save()
             if request.headers.get("HX-Request"):
-                # HTMX: return only the updated comments section
-                return render(request, "issues/_comments_section.html", {"issue": issue, "keep_open": True})
+                # HTMX: return only the updated comments section after successful comment
+                return render(request, "issues/_comments_section.html", {
+                    "issue": issue,
+                    "comment_form": CommentForm(),  # empty form after success
+                    "keep_open": True,
+                    "user": request.user,
+                })
             return redirect("issue_detail", pk=issue.pk)
-        # If form is invalid, re-render issue detail with errors
-        return render(request, "issues/detail.html", {"issue": issue, "comment_form": form, "keep_open": True})
+        if request.headers.get("HX-Request"):
+            # HTMX: return only the comments section with errors
+            return render(request, "issues/_comments_section.html", {
+                "issue": issue,
+                "comment_form": form,  # form with errors
+                "keep_open": True,
+                "user": request.user,
+            })
+        # If form is invalid, re-render issue detail with errors (classic)
+        return render(request, "issues/detail.html", {
+            "issue": issue,
+            "comment_form": form,
+            "keep_open": True,
+        })
     return redirect("issue_detail", pk=issue_pk)
 
 
@@ -134,7 +183,8 @@ def change_status(request, pk):
         if request.headers.get("HX-Request"):
             # HTMX: return only the status badge
             return render(request, "issues/_status_badge.html", {"issue": issue})
-        return redirect("issues_list")
+        # No-JS fallback: redirect to issue detail (full page with layout)
+        return redirect("issue_detail", pk=pk)
     else:
         return redirect("issue_detail", pk=pk)
 

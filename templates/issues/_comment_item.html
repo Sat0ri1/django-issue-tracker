@@ -1,9 +1,11 @@
 {% load i18n %}
-<div class="card p-3 bg-white shadow rounded mb-2" id="comment-{{ comment.pk }}">
-  <div class="text-sm text-gray-800 whitespace-pre-line">{{ comment.text }}</div>
-  <div class="mt-2 text-xs text-gray-500 flex gap-2">
-    <span>{% trans "by" %} {% if comment.author %}{{ comment.author.username }}{% else %}{% trans "Anonymous" %}{% endif %}</span>
-    <span>·</span>
-    <span>{{ comment.created_at|date:"Y-m-d H:i" }}</span>
+<div class="comment-item" data-testid="comment-item">
+  <div class="card p-3 bg-white shadow rounded mb-2" id="comment-{{ comment.pk }}">
+    <div class="text-sm text-gray-800 whitespace-pre-line">{{ comment.text }}</div>
+    <div class="mt-2 text-xs text-gray-500 flex gap-2">
+      <span>{% trans "by" %} {% if comment.author %}{{ comment.author.username }}{% else %}{% trans "Anonymous" %}{% endif %}</span>
+      <span>·</span>
+      <span>{{ comment.created_at|date:"Y-m-d H:i" }}</span>
+    </div>
   </div>
 </div>

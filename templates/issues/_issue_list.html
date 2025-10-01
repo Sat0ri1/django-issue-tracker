@@ -1,14 +1,25 @@
 {% load i18n %}
-<div id="issues-list" class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-  {% for issue in issues %}
-    <div class="flex flex-col">
-      {% include "issues/_issue_item.html" %}
+<div id="issues-list" 
+     class="w-full" 
+     data-testid="issues-list"
+     hx-get="{% url 'project_issues_list' pk=project.pk %}"
+     hx-trigger="issueCreated from:body"
+     hx-swap="outerHTML">
+  {% if issues %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+      {% for issue in issues %}
+        <div class="flex flex-col" data-testid="issue-item">
+          {% include "issues/_issue_item.html" %}
+        </div>
+      {% endfor %}
     </div>
-  {% empty %}
-    <div class="text-center py-12">
-      <div class="text-6xl mb-4">📝</div>
-      <p class="text-lg text-gray-600 mb-2">{% trans "No issues yet" %}</p>
-      <p class="text-sm text-gray-500">{% trans "Start by creating your first issue" %}</p>
+  {% else %}
+    <div class="w-full flex justify-center py-12">
+      <div class="text-center" data-testid="no-issues">
+        <div class="text-6xl mb-4">📝</div>
+        <p class="text-lg text-gray-600 mb-2">{% trans "No issues yet" %}</p>
+        <p class="text-sm text-gray-500">{% trans "Start by creating your first issue" %}</p>
+      </div>
     </div>
-  {% endfor %}
+  {% endif %}
 </div>

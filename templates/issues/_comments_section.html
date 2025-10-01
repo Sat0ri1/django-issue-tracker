@@ -1,70 +1,65 @@
 {% load i18n %}
-<div class="mt-0" id="comments-section-{{ issue.pk }}">
-  <details class="bg-gray-700 rounded-t-none rounded-b-lg shadow-xl" {% if keep_open %}open{% endif %}>
-    <summary class="cursor-pointer px-6 py-3 flex items-center justify-between hover:bg-gray-600 transition-colors list-none border-t border-gray-600">
-      <span class="font-semibold text-white">
-        {% blocktrans with count=issue.comments.count %}Comments ({{ count }}){% endblocktrans %}
-      </span>
-      <span class="details-arrow" aria-hidden="true"></span>
-    </summary>
+{% load widget_tweaks %}
 
-    <div class="px-6 pb-4">
-      <!-- Scrollable comments list -->
-      <div id="comments-list-{{ issue.pk }}" 
-           class="space-y-3 mb-4 max-h-[300px] overflow-y-auto block">
-        {% for comment in issue.comments.all %}
-          {% include "issues/_comment_item.html" %}
-        {% empty %}
-          <p class="text-gray-400 text-center">{% trans "No comments" %}</p>
-        {% endfor %}
-      </div>
+<div id="comments-section-{{ issue.pk }}" class="mt-8" data-testid="comments-section">
+  <div class="bg-gray-700 rounded-lg shadow-xl p-6">
+    <!-- Comments section header -->
+    <h3 class="text-lg font-semibold text-white mb-5">
+      {% blocktrans with count=issue.comments.count %}Comments ({{ count }}){% endblocktrans %}
+    </h3>
 
-      {% if user.is_authenticated and user.role == "assignee" or user.is_authenticated and user.role == "admin" %}
-        <div class="bg-gray-700 rounded-lg p-4">
-          <form
-            method="post"
-            action="{% url 'add_comment' issue_pk=issue.pk %}"
-            hx-post="{% url 'add_comment' issue_pk=issue.pk %}"
-            hx-target="#comments-section-{{ issue.pk }}"
-            hx-swap="outerHTML"
-            hx-trigger="submit, keyup[key=='Enter' && !shiftKey] from:textarea[name='text']"
-            class="space-y-3"
-          >
-            {% csrf_token %}
-            <div class="form-control">
-              <textarea name="text" rows="3" required class="textarea textarea-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-400" placeholder="{% trans 'Write your comment...' %}"></textarea>
-            </div>
-            <button type="submit" class="btn btn-sm bg-gray-200 text-gray-700 border-none rounded-lg shadow-md hover:bg-gray-300 hover:shadow-lg transition-all duration-300 ease-out transform hover:-translate-y-0.5 px-4">
+    <!-- Comments list with scrolling -->
+    <div id="comments-list-{{ issue.pk }}" 
+         class="space-y-4 mb-6 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 pr-2" 
+         data-testid="comments-list">
+      {% for comment in issue.comments.all %}
+        {% include "issues/_comment_item.html" %}
+      {% empty %}
+        <p class="text-gray-400 text-sm text-center" data-testid="no-comments">{% trans "No comments" %}</p>
+      {% endfor %}
+    </div>
+
+    <!-- Comment form - ALWAYS VISIBLE -->
+    {% if user.is_authenticated %}
+      {% if user.role == "assignee" or user.role == "admin" %}
+        {% trans "Write your comment..." as comment_ph %}
+        <form 
+          method="post" 
+          action="{% url 'add_comment' issue_pk=issue.pk %}" 
+          hx-post="{% url 'add_comment' issue_pk=issue.pk %}" 
+          hx-target="#comments-section-{{ issue.pk }}" 
+          hx-swap="outerHTML" 
+          class="space-y-4" 
+          data-testid="comment-form">
+          {% csrf_token %}
+          <div class="form-control">
+            <textarea 
+              name="text" 
+              class="textarea textarea-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-300 focus:ring-2 focus:ring-gray-300 placeholder-gray-300" 
+              rows="4" 
+              placeholder="{{ comment_ph }}" 
+              data-testid="comment-text"></textarea>
+            {% for error in comment_form.text.errors %}
+              <span class="text-red-400 text-sm" data-testid="comment-error">{{ error }}</span>
+            {% endfor %}
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" 
+                    class="btn btn-sm bg-gray-200 text-gray-700 border-none rounded-lg shadow-md hover:bg-gray-300 hover:shadow-lg transition-all duration-200 px-5" 
+                    data-testid="comment-submit">
               {% trans "+ Add comment" %}
             </button>
-          </form>
-        </div>
+          </div>
+        </form>
       {% else %}
-        {% if not user.is_authenticated %}
-          <p class="text-gray-400 text-sm">
-            {% trans "You must" %}
-            <a href="{% url 'login' %}" class="text-blue-600 underline hover:text-blue-800">{% trans "log in" %}</a>
-            {% trans "to add a comment." %}
-          </p>
-        {% else %}
-          <p class="text-gray-400 text-sm">{% trans "Only assignees and admins can add comments." %}</p>
-        {% endif %}
+        <p class="text-gray-400 text-xs">{% trans "Only assignees and admins can add comments." %}</p>
       {% endif %}
-    </div>
-  </details>
+    {% else %}
+      <p class="text-gray-400 text-xs">
+        {% trans "You must" %} 
+        <a href="{% url 'login' %}" class="text-blue-500 underline hover:text-blue-700">{% trans "log in" %}</a> 
+        {% trans "to add a comment." %}
+      </p>
+    {% endif %}
+  </div>
 </div>
-
-<style>
-.details-arrow {
-  display: inline-block;
-  width: 0;
-  height: 0;
-  margin-left: .5rem;
-  border-left: 12px solid transparent;
-  border-right: 12px solid transparent;
-  border-top: 8px solid #ffffff;
-  transition: transform .2s ease;
-  vertical-align: middle;
-}
-details[open] .details-arrow { transform: rotate(180deg); }
-</style>

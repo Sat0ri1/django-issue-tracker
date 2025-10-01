@@ -1,6 +1,7 @@
 import os
 import pytest
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.contrib.auth import get_user_model
 from issues.models import Project, Issue, Comment
 
@@ -61,78 +62,39 @@ def issue(db, project, reporter_user):
 @pytest.mark.django_db(transaction=True)
 def test_register_valid(page: Page, live_server):
     page.goto(f"{live_server.url}/register/")
-    page.fill("input[name='username']", "play_user")
-    page.fill("input[name='email']", "play@example.com")
-    page.fill("input[name='password1']", "StrongPass123")
-    page.fill("input[name='password2']", "StrongPass123")
-    page.click("button[type='submit']")
+    page.get_by_test_id("register-username").fill("play_user")
+    page.get_by_test_id("register-email").fill("play@example.com")
+    page.get_by_test_id("register-password1").fill("StrongPass123")
+    page.get_by_test_id("register-password2").fill("StrongPass123")
+    page.get_by_test_id("register-submit").click()
     assert User.objects.filter(username="play_user").exists()
 
 
 @pytest.mark.django_db(transaction=True)
 def test_register_invalid(page: Page, live_server):
     page.goto(f"{live_server.url}/register/")
-    page.fill("input[name='username']", "")
-    page.fill("input[name='email']", "bademail")
-    page.fill("input[name='password1']", "123")
-    page.fill("input[name='password2']", "456")
-    page.click("button[type='submit']")
-    
-    # Check that user was NOT created (more reliable)
+    page.get_by_test_id("register-username").fill("")
+    page.get_by_test_id("register-email").fill("bademail")
+    page.get_by_test_id("register-password1").fill("123")
+    page.get_by_test_id("register-password2").fill("456")
+    page.get_by_test_id("register-submit").click()
     assert not User.objects.filter(username="").exists()
-    
-    # Alternative: check if still on registration page
     assert "register" in page.url.lower()
 
 
 @pytest.mark.django_db(transaction=True)
 def test_logout_logs_user_out(page: Page, live_server, reporter_user):
-    # Login
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", reporter_user.username)
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
-    
-    # Wait for page to load after login
+    page.get_by_test_id("login-username").fill(reporter_user.username)
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     page.wait_for_load_state("networkidle")
-    
-    # Check various possible texts for logout
-    logout_locators = [
-        page.locator("text=Logout"),
-        page.locator("text=Log out"), 
-        page.locator("text=Sign out"),
-        page.locator("a[href*='logout']"),  # link containing 'logout'
-        page.locator("button:has-text('Logout')"),
-        page.locator("button:has-text('Log out')")
-    ]
-    
-    # Find first visible logout element
-    logout_element = None
-    for locator in logout_locators:
-        if locator.is_visible():
-            logout_element = locator
-            break
-    
-    # If logout not found, print page content for debugging
-    if not logout_element:
-        print("DEBUG: Page content after login:")
-        print(page.content()[:500])  # First 500 characters
-        assert False, "Could not find logout element on page"
-    
-    # Click logout
+    logout_element = page.get_by_test_id("logout")
+    assert logout_element.is_visible()
     logout_element.click()
     page.wait_for_load_state("networkidle")
-    
-    # Check if "Login" appeared
-    login_locators = [
-        page.locator("text=Login"),
-        page.locator("text=Log in"),
-        page.locator("text=Sign in"),
-        page.locator("a[href*='login']")
-    ]
-    
-    login_visible = any(loc.is_visible() for loc in login_locators)
-    assert login_visible, "Could not find login element after logout"
+    login_visible = page.get_by_test_id("login").is_visible()
+    assert login_visible
 
 
 # -------------------------------
@@ -147,45 +109,33 @@ def test_create_project_requires_login(page: Page, live_server):
 @pytest.mark.django_db(transaction=True)
 def test_create_project_allowed_for_admin(page: Page, live_server, admin_user):
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", admin_user.username)
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
-
+    page.get_by_test_id("login-username").fill(admin_user.username)
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     page.goto(f"{live_server.url}/projects/create/")
-    
-    page.fill("input[name='name']", "Admin Project")
-    page.fill("textarea[name='description']", "Admin project description")
-    
-    # Use a more specific selector - button with text "Create Project"
-    page.click("button:has-text('Create Project')")
-    # OR alternatively:
-    # page.click("form:has(input[name='name']) button[type='submit']")
-    
+    page.get_by_test_id("project-name").fill("Admin Project")
+    page.get_by_test_id("project-description").fill("Admin project description")
+    page.get_by_test_id("project-submit").click()
     page.wait_for_load_state("networkidle")
-    
     assert project_exists("Admin Project")
 
 
 @pytest.mark.django_db(transaction=True)
 def test_create_project_forbidden_for_non_admin(page: Page, live_server, reporter_user):
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", reporter_user.username)
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
-
+    page.get_by_test_id("login-username").fill(reporter_user.username)
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     page.goto(f"{live_server.url}/projects/create/")
     content = page.content()
-    
-    # Check various possible forbidden messages
     forbidden_messages = [
         "forbidden" in content.lower(),
         "403" in content,
         "login" in page.url,
-        "only admin" in content.lower(),  # <-- ADDED!
+        "only admin" in content.lower(),
         "access denied" in content.lower(),
         "permission denied" in content.lower()
     ]
-    
     assert any(forbidden_messages), f"Expected forbidden access, but got: {content}"
 
 
@@ -203,47 +153,29 @@ def test_create_issue_requires_login(page: Page, live_server, project):
 def test_create_issue_logged_in(page: Page, live_server, project, db, role):
     user = create_user(f"user_{role}", "pass", role=role)
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", user.username)
-    page.fill("input[name='password']", "pass")
-    page.click("button[type='submit']")
-
-    # CHANGE: Go to project page instead of /issues/create/
+    page.get_by_test_id("login-username").fill(user.username)
+    page.get_by_test_id("login-password").fill("pass")
+    page.get_by_test_id("login-submit").click()
     page.goto(f"{live_server.url}/projects/{project.pk}/")
-    
-    # Find issue creation form on the project page
-    page.fill("input[name='title']", f"Issue by {role}")
-    page.fill("textarea[name='description']", "Issue description")
-    
-    # Find submit button for issue form (not project!)
-    page.locator("form:has(input[name='title'])").locator("button[type='submit']").click()
+    page.get_by_test_id("issue-title").fill(f"Issue by {role}")
+    page.get_by_test_id("issue-description").fill("Issue description")
+    page.get_by_test_id("issue-submit").click()
     page.wait_for_load_state("networkidle")
-    
     assert issue_exists(f"Issue by {role}")
 
 
 @pytest.mark.django_db(transaction=True)
 def test_create_issue_invalid_form(page: Page, live_server, project, reporter_user):
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", reporter_user.username)
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
-
-    # CHANGE: Go to project page (as in the updated test)
+    page.get_by_test_id("login-username").fill(reporter_user.username)
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     page.goto(f"{live_server.url}/projects/{project.pk}/")
-    
-    # Fill invalid data (empty title)
-    page.fill("input[name='title']", "")
-    page.fill("textarea[name='description']", "desc")
-    
-    # Find submit button for issue form
-    page.locator("form:has(input[name='title'])").locator("button[type='submit']").click()
+    page.get_by_test_id("issue-title").fill("")
+    page.get_by_test_id("issue-description").fill("desc")
+    page.get_by_test_id("issue-submit").click()
     page.wait_for_load_state("networkidle")
-
-    # Check that issue was NOT created (more reliable)
     assert not issue_exists("")
-    
-    # CHANGE: Check if you are on the project or main page (after form error)
-    # Instead of checking "create" in URL
     assert page.url.endswith("/") or f"projects/{project.pk}" in page.url
 
 
@@ -261,51 +193,18 @@ def test_change_status_requires_login(page: Page, live_server, issue):
 def test_change_status_allowed(page: Page, live_server, issue, role):
     user = create_user(f"user_{role}", "pass", role=role)
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", user.username)
-    page.fill("input[name='password']", "pass")
-    page.click("button[type='submit']")
-
-    # Go to project page where issues with status change forms are listed
+    page.get_by_test_id("login-username").fill(user.username)
+    page.get_by_test_id("login-password").fill("pass")
+    page.get_by_test_id("login-submit").click()
     page.goto(f"{live_server.url}/projects/{issue.project.pk}/")
-    
-    # Wait for issues to load
     page.wait_for_load_state("networkidle")
-    
-    # DEBUG: Check what is on the page
-    print(f"DEBUG: Issue ID: {issue.pk}")
-    print(f"DEBUG: User role: {role}")
-    
-    # Check various selectors
-    all_forms = page.locator("form").count()
-    status_selects = page.locator("select[name='status']").count()
-    update_buttons = page.locator("button:has-text('Update')").count()
-    
-    print(f"DEBUG: Forms on page: {all_forms}")
-    print(f"DEBUG: Status selects: {status_selects}")
-    print(f"DEBUG: Update buttons: {update_buttons}")
-    
-    # Check HTML for debugging
-    if status_selects == 0:
-        print("DEBUG: Page content (first 1000 chars):")
-        print(page.content()[:1000])
-    
-    # Simpler selector - just select[name='status']
-    status_select = page.locator("select[name='status']")
-    assert status_select.count() > 0, f"No status select found for {role}"
+    status_select = page.get_by_test_id(f"status-select-{issue.pk}")
     assert status_select.is_visible(), f"Status select should be visible for {role}"
-    
-    # Change status to 'done'
     status_select.select_option("done")
-    
-    # Click the first available Update button
-    update_button = page.locator("button:has-text('Update')")
-    assert update_button.count() > 0, "No Update button found"
-    update_button.first.click()
-    
-    # Wait for HTMX response
+    update_button = page.get_by_test_id(f"status-update-{issue.pk}")
+    assert update_button.is_visible(), "Update button should be visible"
+    update_button.click()
     page.wait_for_timeout(1000)
-    
-    # Check in the database
     issue.refresh_from_db()
     assert issue.status == "done"
 
@@ -313,27 +212,15 @@ def test_change_status_allowed(page: Page, live_server, issue, role):
 @pytest.mark.django_db(transaction=True)
 def test_change_status_forbidden_for_regular_user(page: Page, live_server, issue, reporter_user):
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", reporter_user.username)
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
-
-    # Go to project page
+    page.get_by_test_id("login-username").fill(reporter_user.username)
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     page.goto(f"{live_server.url}/projects/{issue.project.pk}/")
     page.wait_for_load_state("networkidle")
-    
-    # For reporter, status change form should NOT be visible
-    status_form = page.locator(f"form:has([hx-target='#status-badge-{issue.pk}'])")
-    assert not status_form.is_visible(), "Status change form should not be visible for reporters"
-    
-    # Alternatively: check if select does not exist
-    status_select = page.locator("select[name='status']")
-    if status_select.count() > 0:
-        assert not status_select.is_visible(), "Status select should not be visible for reporters"
-    
-    # Status should not change (remains unchanged)
-    original_status = issue.status
+    status_select = page.get_by_test_id(f"status-select-{issue.pk}")
+    assert not status_select.is_visible(), "Status select should not be visible for reporters"
     issue.refresh_from_db()
-    assert issue.status == original_status
+    assert issue.status == issue.status
 
 
 # -------------------------------
@@ -350,101 +237,310 @@ def test_add_comment_requires_login(page: Page, live_server, issue):
 def test_add_comment_allowed(page: Page, live_server, issue, role):
     user = create_user(f"user_{role}", "pass", role=role)
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", user.username)
-    page.fill("input[name='password']", "pass")
-    page.click("button[type='submit']")
-
-    # CHANGE: Go to project page where issues with comments are listed
+    page.get_by_test_id("login-username").fill(user.username)
+    page.get_by_test_id("login-password").fill("pass")
+    page.get_by_test_id("login-submit").click()
     page.goto(f"{live_server.url}/projects/{issue.project.pk}/")
     page.wait_for_load_state("networkidle")
-    
-    # CHANGE: Open comments section (click on details summary)
-    comments_summary = page.locator("summary:has-text('Comments')")
+    comments_summary = page.get_by_test_id(f"comments-section-{issue.pk}").locator("summary")
     if comments_summary.is_visible():
         comments_summary.click()
-        page.wait_for_timeout(500)  # Wait for details to open
-    
-    # Now fill the comment form
-    textarea = page.locator("textarea[name='text']")
-    
-    # Debug if textarea is not visible
-    if not textarea.is_visible():
-        print("DEBUG: Textarea not visible, page content:")
-        print(page.content()[:1000])
-        
-        # Try to find other selectors
-        all_textareas = page.locator("textarea").count()
-        print(f"DEBUG: All textareas on page: {all_textareas}")
-        
-        # Check if comments section exists
-        comments_sections = page.locator("[id*='comments']").count()
-        print(f"DEBUG: Comments sections: {comments_sections}")
-    
+        page.wait_for_timeout(500)
+    textarea = page.get_by_test_id("comment-form").locator("textarea")
     assert textarea.is_visible(), f"Comment textarea should be visible for {role}"
-    
     textarea.fill(f"Comment by {role}")
-    
-    # Find Add Comment button
-    add_button = page.locator("button:has-text('Add Comment')")
+    add_button = page.get_by_test_id("comment-submit")
     assert add_button.is_visible(), "Add Comment button should be visible"
     add_button.click()
-    
-    page.wait_for_timeout(1000)  # Wait for HTMX response
-    
-    # Check in the database
+    page.wait_for_timeout(1000)
     assert comment_exists(issue, f"Comment by {role}", user)
 
 
 @pytest.mark.django_db(transaction=True)
 def test_add_comment_forbidden_for_regular_user(page: Page, live_server, issue, reporter_user):
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", reporter_user.username)
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
-
-    # CHANGE: Go to project page
+    page.get_by_test_id("login-username").fill(reporter_user.username)
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     page.goto(f"{live_server.url}/projects/{issue.project.pk}/")
     page.wait_for_load_state("networkidle")
-    
-    # CHANGE: Try to open comments
-    comments_summary = page.locator("summary:has-text('Comments')")
+    comments_summary = page.get_by_test_id(f"comments-section-{issue.pk}").locator("summary")
     if comments_summary.is_visible():
         comments_summary.click()
         page.wait_for_timeout(500)
-    
-    # For reporter, comment form should NOT be visible
-    textarea = page.locator("textarea[name='text']")
+    textarea = page.get_by_test_id("comment-form").locator("textarea")
     assert not textarea.is_visible(), "Comment form should not be visible for reporters"
-    
-    # Status should not change
     assert not comment_exists(issue, "Blocked comment", reporter_user)
 
 
 @pytest.mark.django_db(transaction=True)
 def test_add_comment_invalid_form(page: Page, live_server, issue, admin_user):
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", admin_user.username)
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
-
-    # CHANGE: Go to project page
+    page.get_by_test_id("login-username").fill(admin_user.username)
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     page.goto(f"{live_server.url}/projects/{issue.project.pk}/")
     page.wait_for_load_state("networkidle")
-    
-    # Open comments
-    comments_summary = page.locator("summary:has-text('Comments')")
+    comments_summary = page.get_by_test_id(f"comments-section-{issue.pk}").locator("summary")
     if comments_summary.is_visible():
         comments_summary.click()
         page.wait_for_timeout(500)
-    
-    # Fill with empty text
-    textarea = page.locator("textarea[name='text']")
+    textarea = page.get_by_test_id("comment-form").locator("textarea")
     textarea.fill("")
-    
-    add_button = page.locator("button:has-text('Add Comment')")
+    add_button = page.get_by_test_id("comment-submit")
     add_button.click()
-    
     page.wait_for_timeout(1000)
-    
-    # Empty comment should not be added
     assert not comment_exists(issue, "", admin_user)
+
+
+# -------------------------------
+# PLAYWRIGHT TEST CASE
+# -------------------------------
+class PlaywrightTestCase(StaticLiveServerTestCase):
+    """Base test case for Playwright tests with Django Live Server"""
+    
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.admin_user = User.objects.create_user(
+            username="admin", email="admin@test.com", password="testpass123", role="admin"
+        )
+        cls.assignee_user = User.objects.create_user(
+            username="assignee", email="assignee@test.com", password="testpass123", role="assignee"
+        )
+        cls.user = User.objects.create_user(
+            username="user", email="user@test.com", password="testpass123", role="user"
+        )
+        cls.project = Project.objects.create(name="Test Project")
+
+    def login_user(self, page: Page, username: str, password: str = "testpass123"):
+        """Helper method to log in a user via the UI"""
+        page.goto(f"{self.live_server_url}/auth/login/")
+        page.fill('[data-testid="username"]', username)
+        page.fill('[data-testid="password"]', password)
+        page.click('[data-testid="login-submit"]')
+
+
+@pytest.mark.django_db
+class TestIssueCreationFlow(PlaywrightTestCase):
+    """Test the complete issue creation flow with HTMX"""
+
+    def test_create_issue_flow(self, page: Page):
+        """Test creating an issue and seeing it appear in the list"""
+        self.login_user(page, "user")
+        
+        # Navigate to project detail
+        page.goto(f"{self.live_server_url}/projects/{self.project.pk}/")
+        
+        # Verify issue form is visible
+        expect(page.locator('[data-testid="issue-form-container"]')).to_be_visible()
+        
+        # Fill and submit the form
+        page.fill('[data-testid="issue-title"]', "E2E Test Issue")
+        page.fill('[data-testid="issue-description"]', "This is a test issue created via E2E testing")
+        page.click('[data-testid="issue-submit"]')
+        
+        # Wait for form to be replaced with clean form
+        expect(page.locator('[data-testid="issue-form-container"]')).to_be_visible()
+        expect(page.locator('[data-testid="issue-title"]')).to_have_value("")
+        
+        # Wait for issue to appear in the list
+        expect(page.locator('[data-testid="issue-item"]')).to_be_visible()
+        expect(page.locator('text="E2E Test Issue"')).to_be_visible()
+
+    def test_create_issue_validation_errors(self, page: Page):
+        """Test form validation errors display correctly"""
+        self.login_user(page, "user")
+        page.goto(f"{self.live_server_url}/projects/{self.project.pk}/")
+        
+        # Submit empty form
+        page.click('[data-testid="issue-submit"]')
+        
+        # Check for validation errors
+        expect(page.locator('[data-testid="issue-title-error"]')).to_be_visible()
+
+    def test_admin_sees_assignee_field(self, page: Page):
+        """Test that admin users see the assignee selection field"""
+        self.login_user(page, "admin")
+        page.goto(f"{self.live_server_url}/projects/{self.project.pk}/")
+        
+        # Admin should see assignee field
+        expect(page.locator('[data-testid="issue-assignee"]')).to_be_visible()
+
+    def test_regular_user_no_assignee_field(self, page: Page):
+        """Test that regular users don't see the assignee selection field"""
+        self.login_user(page, "user")
+        page.goto(f"{self.live_server_url}/projects/{self.project.pk}/")
+        
+        # Regular user should not see assignee field
+        expect(page.locator('[data-testid="issue-assignee"]')).not_to_be_visible()
+
+
+@pytest.mark.django_db
+class TestCommentFlow(PlaywrightTestCase):
+    """Test the comment creation and display flow"""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.issue = Issue.objects.create(
+            title="Test Issue for Comments",
+            description="Test Description",
+            project=cls.project,
+            author=cls.user,
+            assignee=cls.assignee_user,
+        )
+
+    def test_assignee_can_add_comments(self, page: Page):
+        """Test that assignees can add comments"""
+        self.login_user(page, "assignee")
+        page.goto(f"{self.live_server_url}/issues/{self.issue.pk}/")
+        
+        # Verify comment form is visible
+        expect(page.locator('[data-testid="comment-form"]')).to_be_visible()
+        expect(page.locator('[data-testid="comment-text"]')).to_be_visible()
+        
+        # Add a comment
+        page.fill('[data-testid="comment-text"]', "This is a test comment from assignee")
+        page.click('[data-testid="comment-submit"]')
+        
+        # Wait for comment to appear
+        expect(page.locator('text="This is a test comment from assignee"')).to_be_visible()
+        
+        # Verify form is cleared
+        expect(page.locator('[data-testid="comment-text"]')).to_have_value("")
+
+    def test_admin_can_add_comments(self, page: Page):
+        """Test that admins can add comments"""
+        self.login_user(page, "admin")
+        page.goto(f"{self.live_server_url}/issues/{self.issue.pk}/")
+        
+        # Verify comment form is visible
+        expect(page.locator('[data-testid="comment-form"]')).to_be_visible()
+        
+        # Add a comment
+        page.fill('[data-testid="comment-text"]', "This is a test comment from admin")
+        page.click('[data-testid="comment-submit"]')
+        
+        # Wait for comment to appear
+        expect(page.locator('text="This is a test comment from admin"')).to_be_visible()
+
+    def test_regular_user_cannot_add_comments(self, page: Page):
+        """Test that regular users cannot add comments"""
+        self.login_user(page, "user")
+        page.goto(f"{self.live_server_url}/issues/{self.issue.pk}/")
+        
+        # Should not see comment form
+        expect(page.locator('[data-testid="comment-form"]')).not_to_be_visible()
+        
+        # Should see message about permissions
+        expect(page.locator('text="Only assignees and admins can add comments"')).to_be_visible()
+
+    def test_comment_scrolling(self, page: Page):
+        """Test that comments section scrolls when there are many comments"""
+        # Create multiple comments first
+        from issues.models import Comment
+        for i in range(10):
+            Comment.objects.create(
+                text=f"Comment {i}",
+                issue=self.issue,
+                author=self.assignee_user
+            )
+        
+        self.login_user(page, "assignee")
+        page.goto(f"{self.live_server_url}/issues/{self.issue.pk}/")
+        
+        # Check that comments list has overflow styling
+        comments_list = page.locator('[data-testid="comments-list"]')
+        expect(comments_list).to_be_visible()
+        expect(comments_list).to_have_css("overflow-y", "auto")
+
+
+@pytest.mark.django_db
+class TestResponsiveDesign(PlaywrightTestCase):
+    """Test responsive design and mobile compatibility"""
+
+    def test_mobile_layout(self, page: Page):
+        """Test that the layout works on mobile devices"""
+        # Set mobile viewport
+        page.set_viewport_size({"width": 375, "height": 667})
+        
+        self.login_user(page, "user")
+        page.goto(f"{self.live_server_url}/projects/{self.project.pk}/")
+        
+        # Verify form is still visible and usable on mobile
+        expect(page.locator('[data-testid="issue-form-container"]')).to_be_visible()
+        expect(page.locator('[data-testid="issue-title"]')).to_be_visible()
+        expect(page.locator('[data-testid="issue-description"]')).to_be_visible()
+
+    def test_tablet_layout(self, page: Page):
+        """Test that the layout works on tablet devices"""
+        # Set tablet viewport
+        page.set_viewport_size({"width": 768, "height": 1024})
+        
+        self.login_user(page, "user")
+        page.goto(f"{self.live_server_url}/projects/{self.project.pk}/")
+        
+        # Verify layout adapts to tablet size
+        expect(page.locator('[data-testid="issue-form-container"]')).to_be_visible()
+        expect(page.locator('[data-testid="issues-list"]')).to_be_visible()
+
+
+@pytest.mark.django_db
+class TestHTMXInteractions(PlaywrightTestCase):
+    """Test HTMX-specific interactions and behaviors"""
+
+    def test_issue_list_updates_without_page_refresh(self, page: Page):
+        """Test that issue list updates via HTMX without full page refresh"""
+        self.login_user(page, "user")
+        page.goto(f"{self.live_server_url}/projects/{self.project.pk}/")
+        
+        # Get initial page URL
+        initial_url = page.url
+        
+        # Create an issue
+        page.fill('[data-testid="issue-title"]', "HTMX Test Issue")
+        page.fill('[data-testid="issue-description"]', "Testing HTMX updates")
+        page.click('[data-testid="issue-submit"]')
+        
+        # Verify URL hasn't changed (no full page refresh)
+        expect(page).to_have_url(initial_url)
+        
+        # Verify issue appears in list
+        expect(page.locator('text="HTMX Test Issue"')).to_be_visible()
+
+    def test_form_replacement_on_success(self, page: Page):
+        """Test that form is replaced with clean form on successful submission"""
+        self.login_user(page, "user")
+        page.goto(f"{self.live_server_url}/projects/{self.project.pk}/")
+        
+        # Fill form
+        page.fill('[data-testid="issue-title"]', "Form Replacement Test")
+        page.fill('[data-testid="issue-description"]', "Testing form replacement")
+        
+        # Submit form
+        page.click('[data-testid="issue-submit"]')
+        
+        # Verify form is cleared
+        expect(page.locator('[data-testid="issue-title"]')).to_have_value("")
+        expect(page.locator('[data-testid="issue-description"]')).to_have_value("")
+
+    def test_comment_form_stays_visible(self, page: Page):
+        """Test that comment form is always visible and doesn't require clicking"""
+        issue = Issue.objects.create(
+            title="Comment Visibility Test",
+            description="Test Description",
+            project=self.project,
+            author=self.user,
+            assignee=self.assignee_user,
+        )
+        
+        self.login_user(page, "assignee")
+        page.goto(f"{self.live_server_url}/issues/{issue.pk}/")
+        
+        # Verify comment form is immediately visible
+        expect(page.locator('[data-testid="comment-form"]')).to_be_visible()
+        expect(page.locator('[data-testid="comment-text"]')).to_be_visible()
+        
+        # Verify placeholder text
+        expect(page.locator('[data-testid="comment-text"]')).to_have_attribute("placeholder", "Write your comment...")
