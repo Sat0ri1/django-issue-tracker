@@ -287,7 +287,7 @@ def test_issue_list_updates_after_creation(page: Page, live_server, test_project
     
     page.goto(f"{live_server.url}/projects/{test_project.pk}/")
     
-    # Sprawdź początkową liczbę issues
+    # Sprawdź początkową liczbę issues - teraz używamy issue-item nie issue-container
     initial_count = page.get_by_test_id("issue-item").count()
     
     # Utwórz nowe issue
