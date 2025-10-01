@@ -35,7 +35,7 @@ def create_issue(project, author, title="Bug #1", description="Bug description")
         description=description,
         project=project,
         author=author,
-        status="open"
+        status="todo"
     )
 
 def project_exists(name):
@@ -107,7 +107,7 @@ def test_register_new_user(page: Page, live_server):
     page.get_by_test_id("register-password2").fill("testpass123")
     page.get_by_test_id("register-submit").click()
     
-    expect(page).to_have_url(f"{live_server.url}/")
+    expect(page).to_have_url(f"{live_server.url}/login/")
 
 # -------------------------------
 # PROJECT CREATION
