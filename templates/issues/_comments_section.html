@@ -71,11 +71,11 @@
 </style>
 
 <div class="bg-gray-700 rounded-lg shadow-xl border border-gray-600 mt-6" id="comments-section-{{ issue.pk }}">
-  <input type="checkbox" id="toggle-comments-{{ issue.pk }}" class="comments-toggle">
+  <input type="checkbox" id="toggle-comments-{{ issue.pk }}" data-testid="toggle-comments-{{ issue.pk }}" class="comments-toggle">
   <label for="toggle-comments-{{ issue.pk }}" class="comments-header flex justify-between items-center cursor-pointer">
     <h3 class="text-xl font-bold text-white">
       {% trans "Comments" %} (
-        <span id="comment-count-{{ issue.pk }}">
+        <span id="comment-count-{{ issue.pk }}" data-testid="comment-count-{{ issue.pk }}">
           {% if comments %}{{ comments|length }}
           {% elif issue.comments_list %}{{ issue.comments_list|length }}
           {% else %}0{% endif %}
@@ -105,6 +105,7 @@
 
       {% if user.is_authenticated and user.role == 'assignee' or user.is_authenticated and user.role == 'admin' %}
       <form id="comment-form-{{ issue.pk }}"
+            data-testid="comment-form"
             method="post"
             hx-post="{% url 'add_comment' issue_pk=issue.pk %}"
             hx-target="#comments-list-{{ issue.pk }}"
@@ -117,12 +118,13 @@
           </label>
           <textarea
             name="content"
+            data-testid="comment-content"
             rows="3"
             class="textarea textarea-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-300 focus:ring-2 focus:ring-gray-300"
             placeholder="{% trans 'Write your comment...' %}"
             required></textarea>
         </div>
-        <button type="submit" class="btn bg-gray-200 text-gray-700 border-none rounded-lg shadow-md hover:bg-gray-300 hover:shadow-lg mt-4">
+        <button type="submit" data-testid="comment-submit" class="btn bg-gray-200 text-gray-700 border-none rounded-lg shadow-md hover:bg-gray-300 hover:shadow-lg mt-4">
           {% trans "Add Comment" %}
         </button>
       </form>
