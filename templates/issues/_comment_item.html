@@ -8,12 +8,13 @@
 </div>
 
 {% if oob_count is not None %}
-  <span id="comment-count-{{ issue.pk }}" hx-swap-oob="true">{{ oob_count }}</span>
+  <span id="comment-count-{{ issue.pk }}" data-testid="comment-count-{{ issue.pk }}" hx-swap-oob="true">{{ oob_count }}</span>
   {% if oob_count == 1 %}
     <div id="no-comments-{{ issue.pk }}" hx-swap-oob="true"></div>
   {% endif %}
   {% if user.is_authenticated and user.role == 'assignee' or user.is_authenticated and user.role == 'admin' %}
     <form id="comment-form-{{ issue.pk }}"
+          data-testid="comment-form"
           hx-swap-oob="true"
           method="post"
           hx-post="{% url 'add_comment' issue_pk=issue.pk %}"
@@ -27,12 +28,13 @@
         </label>
         <textarea
           name="content"
+          data-testid="comment-content"
           rows="3"
           class="textarea textarea-bordered w-full bg-gray-600 text-white border-gray-500 focus:border-gray-300 focus:ring-2 focus:ring-gray-300"
           placeholder="{% trans 'Write your comment...' %}"
           required></textarea>
       </div>
-      <button type="submit" class="btn bg-gray-200 text-gray-700 border-none rounded-lg shadow-md hover:bg-gray-300 hover:shadow-lg mt-4">
+      <button type="submit" data-testid="comment-submit" class="btn bg-gray-200 text-gray-700 border-none rounded-lg shadow-md hover:bg-gray-300 hover:shadow-lg mt-4">
         {% trans "Add Comment" %}
       </button>
     </form>
