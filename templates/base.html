@@ -27,7 +27,7 @@
         Admin
       </a>
       {% if user.is_authenticated and user.role == "admin" %}
-        <a href="{% url 'create_project' %}" class="btn bg-gray-700 text-white border-none rounded-lg shadow-md hover:bg-gray-600 hover:shadow-lg transition-all duration-300 ease-out transform hover:-translate-y-0.5 ml-2 px-6">
+        <a href="{% url 'create_project' %}" data-testid="create-project-link" class="btn bg-gray-700 text-white border-none rounded-lg shadow-md hover:bg-gray-600 hover:shadow-lg transition-all duration-300 ease-out transform hover:-translate-y-0.5 ml-2 px-6">
           <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
