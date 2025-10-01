@@ -39,7 +39,7 @@ class TestModels:
         assert issue.author == user
         assert issue.assignee == user
         assert issue.status == "todo"
-        assert str(issue) == "[todo] Test Issue"  # Model ma format "[status] title"
+        assert str(issue) == "[To Do] Test Issue"
 
     def test_comment_creation(self):
         user = User.objects.create_user(
@@ -98,6 +98,6 @@ class TestModels:
             author=user,
             text="Test comment"
         )
-        # Test related_name='comment' (singular)
+        # Test related_name='comments' (plural)
         assert comment in Comment.objects.filter(issue=issue)
         assert Comment.objects.filter(issue=issue).count() == 1
