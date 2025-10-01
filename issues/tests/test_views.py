@@ -39,7 +39,7 @@ class TestViews:
         assert self.project.name.encode() in response.content
 
     def test_project_detail_view(self):
-        # Najpierw utwórz issue, żeby sekcja komentarzy się pojawiła
+        # First create issue so comments section appears
         Issue.objects.create(
             title="Test Issue",
             description="Test Description", 
@@ -50,8 +50,8 @@ class TestViews:
         response = self.client.get(reverse('project_detail', kwargs={'pk': self.project.pk}))
         assert response.status_code == 200
         assert self.project.name.encode() in response.content
-        # Teraz sekcja komentarzy powinna być widoczna
-        assert b'Komentarze' in response.content or b'Comments' in response.content
+        # Now comments section should be visible
+        assert b'Comments' in response.content or b'Komentarze' in response.content
 
     def test_project_detail_with_issues_and_comments(self):
         issue = Issue.objects.create(
@@ -83,7 +83,7 @@ class TestViews:
         assert response.status_code == 200
         assert issue.title.encode() in response.content
         assert issue.description.encode() in response.content
-        assert b'Komentarze' in response.content or b'Comments' in response.content
+        assert b'Comments' in response.content or b'Komentarze' in response.content
 
     def test_create_issue_authenticated_user(self):
         self.client.login(username='user', password='userpass123')

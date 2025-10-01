@@ -69,7 +69,7 @@ class TestModels:
         assert str(comment) == f"Comment by {user.username} on {issue.title}"
 
     def test_issue_status_choices(self):
-        # Dopasowane do rzeczywistych choices w modelu
+        # Matched to actual choices in model
         assert Issue.STATUS_CHOICES == [
             ("todo", "To Do"),
             ("in_progress", "In Progress"),

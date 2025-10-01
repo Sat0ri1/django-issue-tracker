@@ -80,7 +80,7 @@ def test_issue(test_project, admin_user):
     return create_issue(test_project, admin_user, "E2E Test Issue", "Issue for testing")
 
 # -------------------------------
-# AUTH TESTS - UŻYWAMY TEST-IDS
+# AUTH TESTS - USING TEST-IDS
 # -------------------------------
 @pytest.mark.django_db(transaction=True)
 def test_login_with_valid_credentials(page: Page, live_server, admin_user):
@@ -111,7 +111,7 @@ def test_register_new_user(page: Page, live_server):
     page.get_by_test_id("register-password1").fill("testpass123")
     page.get_by_test_id("register-password2").fill("testpass123")
     
-    # Sprawdź czy pole role ma test-id
+    # Check if role field has test-id
     role_select = page.get_by_test_id("register-role")
     if role_select.count() > 0:
         role_select.select_option("reporter")
@@ -120,7 +120,7 @@ def test_register_new_user(page: Page, live_server):
     expect(page).to_have_url(f"{live_server.url}/login/")
 
 # -------------------------------
-# PROJECT CREATION - UŻYWAMY TEST-IDS
+# PROJECT CREATION - USING TEST-IDS
 # -------------------------------
 @pytest.mark.django_db(transaction=True)
 def test_admin_can_create_project(page: Page, live_server, admin_user):
@@ -131,7 +131,7 @@ def test_admin_can_create_project(page: Page, live_server, admin_user):
     
     expect(page).to_have_url(f"{live_server.url}/")
     
-    # Użyj test-id dla linku do tworzenia projektów
+    # Use test-id for project creation link
     create_project_link = page.get_by_test_id("create-project-link")
     expect(create_project_link).to_be_visible()
     create_project_link.click()
@@ -153,7 +153,7 @@ def test_reporter_cannot_create_project(page: Page, live_server, reporter_user):
     page.get_by_test_id("login-password").fill("password123")
     page.get_by_test_id("login-submit").click()
     
-    # Reporter nie powinien widzieć linku do tworzenia projektów
+    # Reporter should not see project creation link
     expect(page.get_by_test_id("create-project-link")).not_to_be_visible()
 
 @pytest.mark.django_db(transaction=True)
@@ -166,7 +166,7 @@ def test_assignee_cannot_create_project(page: Page, live_server, assignee_user):
     expect(page.get_by_test_id("create-project-link")).not_to_be_visible()
 
 # -------------------------------
-# ISSUE CREATION - UŻYWAMY TEST-IDS
+# ISSUE CREATION - USING TEST-IDS
 # -------------------------------
 @pytest.mark.django_db(transaction=True)
 def test_authenticated_user_can_create_issue(page: Page, live_server, test_project, admin_user):
@@ -191,7 +191,7 @@ def test_anonymous_user_cannot_create_issue(page: Page, live_server, test_projec
     expect(page.get_by_test_id("issue-form")).not_to_be_visible()
 
 # -------------------------------
-# STATUS CHANGE - UŻYWAMY TEST-IDS
+# STATUS CHANGE - USING TEST-IDS
 # -------------------------------
 @pytest.mark.django_db(transaction=True)
 def test_admin_can_change_issue_status(page: Page, live_server, test_project, test_issue, admin_user):
@@ -222,7 +222,7 @@ def test_reporter_cannot_change_status(page: Page, live_server, test_project, te
     expect(page.get_by_test_id("status-select")).not_to_be_visible()
 
 # -------------------------------
-# COMMENTS - UŻYWAMY TEST-IDS
+# COMMENTS - USING TEST-IDS
 # -------------------------------
 @pytest.mark.django_db(transaction=True)
 def test_admin_can_add_comment(page: Page, live_server, test_project, test_issue, admin_user):
@@ -233,12 +233,12 @@ def test_admin_can_add_comment(page: Page, live_server, test_project, test_issue
     
     page.goto(f"{live_server.url}/projects/{test_project.pk}/")
     
-    # Kliknij na label zamiast checkbox (checkbox jest ukryty)
+    # Click on label instead of checkbox (checkbox is hidden)
     comment_toggle_label = page.locator(f"label[for='toggle-comments-{test_issue.pk}']")
     comment_toggle_label.click()
     page.wait_for_timeout(1000)
     
-    # Dodaj komentarz
+    # Add comment
     page.get_by_test_id("comment-content").fill("Admin comment")
     page.get_by_test_id("comment-submit").click()
     
@@ -255,11 +255,11 @@ def test_comment_count_updates_with_htmx(page: Page, live_server, test_project, 
     
     page.goto(f"{live_server.url}/projects/{test_project.pk}/")
     
-    # Sprawdź początkowy licznik
+    # Check initial comment count
     comment_count = page.get_by_test_id(f"comment-count-{test_issue.pk}")
     expect(comment_count).to_contain_text("0")
     
-    # Dodaj komentarz - kliknij label
+    # Add comment - click label
     page.locator(f"label[for='toggle-comments-{test_issue.pk}']").click()
     page.get_by_test_id("comment-content").fill("Test comment")
     page.get_by_test_id("comment-submit").click()
@@ -296,7 +296,7 @@ def test_issue_list_updates_after_creation(page: Page, live_server, test_project
     
     page.wait_for_timeout(2000)
     
-    # Sprawdź czy się dodało
+    # Check if new issue was added
     new_count = page.get_by_test_id("issue-item").count()
     assert new_count == initial_count + 1
     expect(page.locator("text=HTMX Test Issue")).to_be_visible()

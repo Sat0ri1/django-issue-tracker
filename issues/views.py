@@ -21,7 +21,7 @@ def project_detail(request, pk):
     project = get_object_or_404(Project, pk=pk)
     issues = project.issues.select_related("author", "assignee").all()
     
-    # Dodaj komentarze dla każdego issue
+    # Add comments for each issue
     for issue in issues:
         issue.comments_list = Comment.objects.filter(issue=issue).select_related('author').all()
     
@@ -48,7 +48,7 @@ def project_issues_list(request, pk):
 def issue_detail(request, pk):
     # Show details for a single issue, including comments and comment form
     issue = get_object_or_404(Issue, pk=pk)
-    # Użyj Comment.objects.filter zamiast issue.comment
+    # Use Comment.objects.filter instead of issue.comment
     comments = Comment.objects.filter(issue=issue).select_related('author').all()
     comment_form = CommentForm()
     can_comment = request.user.is_authenticated and getattr(request.user, "role", "") in ("assignee", "admin")
@@ -150,21 +150,21 @@ def add_comment(request, issue_pk):
             comment = Comment.objects.create(issue=issue, author=request.user, text=text)
 
             if request.headers.get("HX-Request"):
-                # Policz aktualną liczbę komentarzy
+                # Count current number of comments
                 count = Comment.objects.filter(issue=issue).count()
-                # Render pojedynczego komentarza + dane do OOB (licznik i usunięcie "No comments")
+                # Render single comment + data for OOB (counter and remove "No comments")
                 response = render(
                     request,
                     "issues/_comment_item.html",
                     {
                         "comment": comment,
                         "issue": issue,
-                        "oob_count": count,      # używane w _comment_item.html do hx-swap-oob
+                        "oob_count": count,      # used in _comment_item.html for hx-swap-oob
                     }
                 )
                 return response
 
-        # Pusty tekst przy HTMX – brak zmian
+        # Empty text with HTMX – no changes
         if request.headers.get("HX-Request"):
             return HttpResponse(status=204)
 
