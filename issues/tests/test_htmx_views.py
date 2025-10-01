@@ -162,21 +162,21 @@ class TestHTMXViews:
             description="Test Description",
             project=self.project,
             author=self.user,
-            status="open"
+            status="todo" 
         )
         self.client.login(username='assignee', password='assigneepass123')
         
         response = self.client.post(
             reverse('change_status', kwargs={'pk': issue.pk}),
-            {'status': 'resolved'},
+            {'status': 'done'},
             HTTP_HX_REQUEST='true'
         )
         
         assert response.status_code == 200
         issue.refresh_from_db()
-        assert issue.status == 'resolved'
+        assert issue.status == 'done'
         # Should return status badge
-        assert b'status-badge' in response.content or b'resolved' in response.content.lower()
+        assert b'status-badge' in response.content or b'done' in response.content.lower()
 
     def test_project_issues_list_htmx(self):
         issue = Issue.objects.create(

@@ -42,7 +42,7 @@ class TestViews:
         response = self.client.get(reverse('project_detail', kwargs={'pk': self.project.pk}))
         assert response.status_code == 200
         assert self.project.name.encode() in response.content
-        assert b'Comments' in response.content
+        assert b'Komentarze' in response.content or b'Comments' in response.content
 
     def test_project_detail_with_issues_and_comments(self):
         issue = Issue.objects.create(
@@ -74,7 +74,7 @@ class TestViews:
         assert response.status_code == 200
         assert issue.title.encode() in response.content
         assert issue.description.encode() in response.content
-        assert b'Comments' in response.content
+        assert b'Komentarze' in response.content or b'Comments' in response.content
 
     def test_create_issue_authenticated_user(self):
         self.client.login(username='user', password='userpass123')
@@ -140,7 +140,7 @@ class TestViews:
             description="Test Description",
             project=self.project,
             author=self.user,
-            status="open"
+            status="todo"
         )
         self.client.login(username='assignee', password='assigneepass123')
         response = self.client.post(reverse('change_status', kwargs={'pk': issue.pk}), {

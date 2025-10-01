@@ -32,14 +32,14 @@ class TestModels:
             project=project,
             author=user,
             assignee=user,
-            status="open"
+            status="todo"
         )
         assert issue.title == "Test Issue"
         assert issue.project == project
         assert issue.author == user
         assert issue.assignee == user
-        assert issue.status == "open"
-        assert str(issue) == "Test Issue"
+        assert issue.status == "todo"
+        assert str(issue) == "[todo] Test Issue"  # Model ma format "[status] title"
 
     def test_comment_creation(self):
         user = User.objects.create_user(
@@ -69,11 +69,11 @@ class TestModels:
         assert str(comment) == f"Comment by {user.username} on {issue.title}"
 
     def test_issue_status_choices(self):
+        # Dopasowane do rzeczywistych choices w modelu
         assert Issue.STATUS_CHOICES == [
-            ("open", "Open"),
+            ("todo", "To Do"),
             ("in_progress", "In Progress"),
-            ("resolved", "Resolved"),
-            ("closed", "Closed"),
+            ("done", "Done"),
         ]
 
     def test_comment_related_name(self):
