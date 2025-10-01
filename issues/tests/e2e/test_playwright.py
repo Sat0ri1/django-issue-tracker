@@ -55,7 +55,13 @@ def comment_exists(issue, text, author):
 # -------------------------------
 @pytest.fixture
 def admin_user():
-    return create_user("admin", "password123", "admin")
+    user = User.objects.create_user(
+        username="admin",
+        email="admin@example.com", 
+        password="password123",
+        role="admin"
+    )
+    return user
 
 @pytest.fixture
 def assignee_user():
@@ -74,16 +80,15 @@ def test_issue(test_project, admin_user):
     return create_issue(test_project, admin_user, "E2E Test Issue", "Issue for testing")
 
 # -------------------------------
-# AUTH TESTS
+# AUTH TESTS - UŻYWAMY TEST-IDS
 # -------------------------------
 @pytest.mark.django_db(transaction=True)
 def test_login_with_valid_credentials(page: Page, live_server, admin_user):
     page.goto(f"{live_server.url}/login/")
     
-    # Użyj rzeczywistych selektorów z formularza logowania
-    page.fill("input[name='username']", "admin")
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
+    page.get_by_test_id("login-username").fill("admin")
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     
     expect(page).to_have_url(f"{live_server.url}/")
 
@@ -91,211 +96,221 @@ def test_login_with_valid_credentials(page: Page, live_server, admin_user):
 def test_login_with_invalid_credentials(page: Page, live_server):
     page.goto(f"{live_server.url}/login/")
     
-    page.fill("input[name='username']", "invalid")
-    page.fill("input[name='password']", "wrong")
-    page.click("button[type='submit']")
+    page.get_by_test_id("login-username").fill("invalid")
+    page.get_by_test_id("login-password").fill("wrong")
+    page.get_by_test_id("login-submit").click()
     
-    # Sprawdź czy zostajemy na stronie logowania
     expect(page).to_have_url(f"{live_server.url}/login/")
 
 @pytest.mark.django_db(transaction=True)
 def test_register_new_user(page: Page, live_server):
     page.goto(f"{live_server.url}/register/")
     
-    page.fill("input[name='username']", "newuser")
-    page.fill("input[name='email']", "newuser@example.com")
-    page.fill("input[name='password1']", "testpass123")
-    page.fill("input[name='password2']", "testpass123")
+    page.get_by_test_id("register-username").fill("newuser")
+    page.get_by_test_id("register-email").fill("newuser@example.com")
+    page.get_by_test_id("register-password1").fill("testpass123")
+    page.get_by_test_id("register-password2").fill("testpass123")
     
-    # Sprawdź czy pole role istnieje, jeśli nie - pomiń
-    role_select = page.locator("select[name='role']")
+    # Sprawdź czy pole role ma test-id
+    role_select = page.get_by_test_id("register-role")
     if role_select.count() > 0:
-        page.select_option("select[name='role']", "reporter")
+        role_select.select_option("reporter")
     
-    page.click("button[type='submit']")
-    
-    # Po rejestracji przekierowuje na login
+    page.get_by_test_id("register-submit").click()
     expect(page).to_have_url(f"{live_server.url}/login/")
 
 # -------------------------------
-# PROJECT CREATION
+# PROJECT CREATION - UŻYWAMY TEST-IDS
 # -------------------------------
 @pytest.mark.django_db(transaction=True)
 def test_admin_can_create_project(page: Page, live_server, admin_user):
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", "admin")
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
+    page.get_by_test_id("login-username").fill("admin")
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     
-    # Sprawdź czy link do tworzenia projektów jest widoczny
-    create_project_link = page.locator("text=Create Project").or_(page.locator("a[href='/projects/create/']"))
+    expect(page).to_have_url(f"{live_server.url}/")
+    
+    # Użyj test-id dla linku do tworzenia projektów
+    create_project_link = page.get_by_test_id("create-project-link")
     expect(create_project_link).to_be_visible()
     create_project_link.click()
     
     expect(page).to_have_url(f"{live_server.url}/projects/create/")
     
-    page.fill("input[name='name']", "New Project")
-    page.fill("textarea[name='description']", "Project description")
-    page.click("button[type='submit']")
+    page.get_by_test_id("project-name").fill("Admin Test Project")
+    page.get_by_test_id("project-description").fill("Project created by admin")
+    page.get_by_test_id("project-submit").click()
     
+    page.wait_for_timeout(2000)
     expect(page).to_have_url(f"{live_server.url}/")
-    assert project_exists("New Project")
+    assert project_exists("Admin Test Project")
 
 @pytest.mark.django_db(transaction=True)
-def test_reporter_cannot_see_create_project_link(page: Page, live_server, reporter_user):
+def test_reporter_cannot_create_project(page: Page, live_server, reporter_user):
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", "reporter")
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
+    page.get_by_test_id("login-username").fill("reporter")
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     
     # Reporter nie powinien widzieć linku do tworzenia projektów
-    create_project_link = page.locator("text=Create Project").or_(page.locator("a[href='/projects/create/']"))
-    expect(create_project_link).not_to_be_visible()
+    expect(page.get_by_test_id("create-project-link")).not_to_be_visible()
+
+@pytest.mark.django_db(transaction=True)
+def test_assignee_cannot_create_project(page: Page, live_server, assignee_user):
+    page.goto(f"{live_server.url}/login/")
+    page.get_by_test_id("login-username").fill("assignee")
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
+    
+    expect(page.get_by_test_id("create-project-link")).not_to_be_visible()
 
 # -------------------------------
-# ISSUE CREATION
+# ISSUE CREATION - UŻYWAMY TEST-IDS
 # -------------------------------
 @pytest.mark.django_db(transaction=True)
 def test_authenticated_user_can_create_issue(page: Page, live_server, test_project, admin_user):
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", "admin")
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
+    page.get_by_test_id("login-username").fill("admin")
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     
     page.goto(f"{live_server.url}/projects/{test_project.pk}/")
     
-    # Sprawdź czy formularz do tworzenia issues jest widoczny
-    title_input = page.locator("input[name='title']")
-    expect(title_input).to_be_visible()
+    page.get_by_test_id("issue-title").fill("New Issue")
+    page.get_by_test_id("issue-description").fill("Issue description")
+    page.get_by_test_id("issue-submit").click()
     
-    title_input.fill("New Issue")
-    page.fill("textarea[name='description']", "Issue description")
-    
-    # Znajdź przycisk submit w formularzu issues
-    submit_button = page.locator("form").filter(has=title_input).locator("button[type='submit']")
-    submit_button.click()
-    
-    page.wait_for_timeout(2000)  # Wait for HTMX
-    expect(page.locator("text=New Issue")).to_be_visible()
+    page.wait_for_timeout(2000)
+    expect(page.get_by_test_id("issue-item")).to_be_visible()
     assert issue_exists("New Issue")
 
 @pytest.mark.django_db(transaction=True)
 def test_anonymous_user_cannot_create_issue(page: Page, live_server, test_project):
     page.goto(f"{live_server.url}/projects/{test_project.pk}/")
-    
-    # Anonimowy użytkownik nie powinien widzieć formularza
-    expect(page.locator("input[name='title']")).not_to_be_visible()
+    expect(page.get_by_test_id("issue-form")).not_to_be_visible()
 
 # -------------------------------
-# STATUS CHANGE
+# STATUS CHANGE - UŻYWAMY TEST-IDS
 # -------------------------------
 @pytest.mark.django_db(transaction=True)
 def test_admin_can_change_issue_status(page: Page, live_server, test_project, test_issue, admin_user):
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", "admin")
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
+    page.get_by_test_id("login-username").fill("admin")
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     
     page.goto(f"{live_server.url}/projects/{test_project.pk}/")
     
-    # Sprawdź czy select status jest widoczny
-    status_select = page.locator("select[name='status']").first
+    status_select = page.get_by_test_id("status-select").first
     if status_select.count() > 0:
         expect(status_select).to_be_visible()
         status_select.select_option("in_progress")
         
-        page.wait_for_timeout(2000)  # Wait for HTMX
+        page.wait_for_timeout(2000)
         test_issue.refresh_from_db()
         assert test_issue.status == "in_progress"
 
 @pytest.mark.django_db(transaction=True)
 def test_reporter_cannot_change_status(page: Page, live_server, test_project, test_issue, reporter_user):
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", "reporter")
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
+    page.get_by_test_id("login-username").fill("reporter")
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     
     page.goto(f"{live_server.url}/projects/{test_project.pk}/")
-    
-    # Reporter nie powinien widzieć selecta statusu
-    expect(page.locator("select[name='status']")).not_to_be_visible()
+    expect(page.get_by_test_id("status-select")).not_to_be_visible()
 
 # -------------------------------
-# COMMENTS & HTMX
+# COMMENTS - UŻYWAMY TEST-IDS
 # -------------------------------
 @pytest.mark.django_db(transaction=True)
 def test_admin_can_add_comment(page: Page, live_server, test_project, test_issue, admin_user):
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", "admin")
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
+    page.get_by_test_id("login-username").fill("admin")
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     
     page.goto(f"{live_server.url}/projects/{test_project.pk}/")
     
-    # Kliknij na toggle komentarzy - użyj różnych selektorów
-    toggle_selector = f"#toggle-comments-{test_issue.pk}"
-    toggle_label = f"label[for='toggle-comments-{test_issue.pk}']"
-    
-    if page.locator(toggle_label).count() > 0:
-        page.locator(toggle_label).click()
-    elif page.locator(toggle_selector).count() > 0:
-        page.locator(toggle_selector).click()
-    else:
-        # Kliknij na tekst "Comments" lub podobny
-        page.locator("text=Comments").or_(page.locator("text=Komentarze")).click()
-    
-    # Poczekaj na pojawienie się textarea
+    # Toggle komentarzy
+    page.get_by_test_id(f"toggle-comments-{test_issue.pk}").click()
     page.wait_for_timeout(1000)
     
-    # Dodaj komentarz jeśli textarea jest widoczna
-    textarea = page.locator("textarea[name='content']")
-    if textarea.count() > 0:
-        textarea.fill("Test comment")
-        
-        # Znajdź odpowiedni submit button
-        submit_button = page.locator("button[type='submit']").filter(has_text="Submit").or_(
-            page.locator("button[type='submit']").filter(has_text="Add")
-        )
-        if submit_button.count() == 0:
-            submit_button = page.locator("button[type='submit']").last
-        
-        submit_button.click()
-        
-        page.wait_for_timeout(2000)  # Wait for HTMX
-        expect(page.locator("text=Test comment")).to_be_visible()
-        assert comment_exists(test_issue, "Test comment", admin_user)
+    # Dodaj komentarz
+    page.get_by_test_id("comment-content").fill("Admin comment")
+    page.get_by_test_id("comment-submit").click()
+    
+    page.wait_for_timeout(2000)
+    expect(page.get_by_test_id("comment-item")).to_be_visible()
+    assert comment_exists(test_issue, "Admin comment", admin_user)
+
+@pytest.mark.django_db(transaction=True)
+def test_comment_count_updates_with_htmx(page: Page, live_server, test_project, test_issue, admin_user):
+    page.goto(f"{live_server.url}/login/")
+    page.get_by_test_id("login-username").fill("admin")
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
+    
+    page.goto(f"{live_server.url}/projects/{test_project.pk}/")
+    
+    # Sprawdź początkowy licznik
+    comment_count = page.get_by_test_id(f"comment-count-{test_issue.pk}")
+    expect(comment_count).to_contain_text("0")
+    
+    # Dodaj komentarz
+    page.get_by_test_id(f"toggle-comments-{test_issue.pk}").click()
+    page.get_by_test_id("comment-content").fill("Test comment")
+    page.get_by_test_id("comment-submit").click()
+    
+    page.wait_for_timeout(2000)
+    expect(comment_count).to_contain_text("1")
+
+@pytest.mark.django_db(transaction=True)
+def test_reporter_cannot_add_comments(page: Page, live_server, test_project, test_issue, reporter_user):
+    page.goto(f"{live_server.url}/login/")
+    page.get_by_test_id("login-username").fill("reporter")
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
+    
+    page.goto(f"{live_server.url}/projects/{test_project.pk}/")
+    
+    page.get_by_test_id(f"toggle-comments-{test_issue.pk}").click()
+    expect(page.get_by_test_id("comment-form")).not_to_be_visible()
 
 @pytest.mark.django_db(transaction=True)
 def test_issue_list_updates_after_creation(page: Page, live_server, test_project, admin_user):
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", "admin")
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
+    page.get_by_test_id("login-username").fill("admin")
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     
     page.goto(f"{live_server.url}/projects/{test_project.pk}/")
     
+    # Sprawdź początkową liczbę issues
+    initial_count = page.get_by_test_id("issue-item").count()
+    
     # Utwórz nowe issue
-    title_input = page.locator("input[name='title']")
-    if title_input.count() > 0:
-        title_input.fill("HTMX Test Issue")
-        page.fill("textarea[name='description']", "Testing HTMX updates")
-        
-        submit_button = page.locator("form").filter(has=title_input).locator("button[type='submit']")
-        submit_button.click()
-        
-        page.wait_for_timeout(2000)
-        expect(page.locator("text=HTMX Test Issue")).to_be_visible()
+    page.get_by_test_id("issue-title").fill("HTMX Test Issue")
+    page.get_by_test_id("issue-description").fill("Testing HTMX updates")
+    page.get_by_test_id("issue-submit").click()
+    
+    page.wait_for_timeout(2000)
+    
+    # Sprawdź czy się dodało
+    new_count = page.get_by_test_id("issue-item").count()
+    assert new_count == initial_count + 1
+    expect(page.locator("text=HTMX Test Issue")).to_be_visible()
 
 @pytest.mark.django_db(transaction=True)
 def test_no_issues_message_when_empty(page: Page, live_server, admin_user):
     empty_project = create_project("Empty Project")
     
     page.goto(f"{live_server.url}/login/")
-    page.fill("input[name='username']", "admin")
-    page.fill("input[name='password']", "password123")
-    page.click("button[type='submit']")
+    page.get_by_test_id("login-username").fill("admin")
+    page.get_by_test_id("login-password").fill("password123")
+    page.get_by_test_id("login-submit").click()
     
     page.goto(f"{live_server.url}/projects/{empty_project.pk}/")
     
-    # Sprawdź czy pokazuje się komunikat o braku issues
-    expect(page.locator("text=No issues").or_(page.locator("text=Brak"))).to_be_visible()
+    expect(page.get_by_test_id("no-issues")).to_be_visible()
