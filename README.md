@@ -39,7 +39,7 @@ print(get_random_secret_key())
 If you use [uv](https://github.com/astral-sh/uv) and have `uv.lock`:
 
 ```sh
-uv pip install --system
+uv sync
 ```
 
 If you want to use `requirements.txt` (optional):
@@ -116,7 +116,7 @@ You need to run the CSS build command for styles to appear correctly in the app.
 
 - Run tests:
   ```sh
-  uv pip install --system --dev
+  uv sync --dev
   pytest
   ```
 - Access Django admin: [http://localhost:8000/admin](http://localhost:8000/admin)
